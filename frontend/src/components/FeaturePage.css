@@ -1,0 +1,29 @@
+.feature-page {
+  padding: 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+.feature-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.feature-page-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.feature-page-header p {
+  font-size: 0.8125rem;
+  color: var(--dark-secondary);
+  margin-top: 2px;
+}
+
+@media (max-width: 640px) {
+  .feature-page {
+    padding: 16px;
+  }
+}
