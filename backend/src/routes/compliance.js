@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const auth = require('../middleware/auth');
+const aiRateLimiter = require('../middleware/aiRateLimit');
 const { verifyCompliance } = require('../services/ai');
 
 const router = express.Router();
@@ -84,8 +85,30 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// POST /api/compliance/:id/verify - AI compliance verify (alias)
+router.post('/:id/verify', auth, aiRateLimiter, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM compliance_records WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Compliance record not found' });
+
+    const record = result.rows[0];
+    const analysis = await verifyCompliance(record);
+
+    await pool.query(
+      `INSERT INTO ai_analysis_results (analysis_type, entity_id, entity_type, input_data, ai_response, model_used, confidence_score, recommendations)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      ['compliance_verify', record.id, 'compliance_record', JSON.stringify(record),
+       JSON.stringify(analysis.result || analysis), analysis.model || 'unknown', 0, JSON.stringify(analysis.result?.action_items || [])]
+    );
+
+    res.json({ record, analysis: analysis.result || analysis });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/compliance/:id/check - AI compliance check
-router.post('/:id/check', auth, async (req, res) => {
+router.post('/:id/check', auth, aiRateLimiter, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM compliance_records WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Compliance record not found' });

@@ -1,6 +1,6 @@
 import React from 'react';
 import FeaturePage from '../components/FeaturePage';
-import { getDenials, createDenial, updateDenial, deleteDenial, generateAppeal, analyzeDenialPatterns } from '../services/api';
+import { getDenials, createDenial, updateDenial, deleteDenial, suggestAppeal, analyzeDenialPattern, analyzeDenialPatterns } from '../services/api';
 
 const columns = [
   { key: 'claim_id', label: 'Claim ID' },
@@ -21,8 +21,8 @@ const fields = [
 ];
 
 const aiActions = [
-  { label: 'Generate Appeal', handler: generateAppeal },
-  { label: 'Analyze Patterns', handler: analyzeDenialPatterns },
+  { label: 'Suggest Appeal', handler: suggestAppeal },
+  { label: 'Analyze Pattern', handler: analyzeDenialPattern },
 ];
 
 export default function DenialsPage() {

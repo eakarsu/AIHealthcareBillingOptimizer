@@ -1,6 +1,6 @@
 import React from 'react';
 import FeaturePage from '../components/FeaturePage';
-import { getAgingReports, createAgingReport, updateAgingReport, deleteAgingReport, predictCollections } from '../services/api';
+import { getAgingReports, createAgingReport, updateAgingReport, deleteAgingReport, predictCollectionById } from '../services/api';
 
 const columns = [
   { key: 'patient_id', label: 'Patient ID' },
@@ -21,7 +21,7 @@ const fields = [
 ];
 
 const aiActions = [
-  { label: 'Predict Collections', handler: predictCollections },
+  { label: 'Predict Collection', handler: predictCollectionById },
 ];
 
 export default function AgingReportsPage() {

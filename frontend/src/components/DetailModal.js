@@ -59,10 +59,17 @@ export default function DetailModal({
       const res = await action.handler(item.id || item._id);
       setAiResult(res.data);
     } catch (err) {
-      setAiResult({
-        error: true,
-        message: err.response?.data?.message || 'AI analysis failed. Please try again.',
-      });
+      if (err.response?.status === 429) {
+        setAiResult({
+          error: true,
+          message: 'Rate limit reached. You can run up to 20 AI analyses per hour. Please try again later.',
+        });
+      } else {
+        setAiResult({
+          error: true,
+          message: err.response?.data?.error || err.response?.data?.message || 'AI analysis failed. Please try again.',
+        });
+      }
     } finally {
       setAiLoading(false);
     }

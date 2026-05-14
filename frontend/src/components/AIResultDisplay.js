@@ -202,6 +202,9 @@ export default function AIResultDisplay({ result, loading }) {
             <div className="ai-confidence-fill" style={{ width: `${parsed.confidence}%` }} />
           </div>
           <span className="ai-confidence-value">{parsed.confidence}%</span>
+          <span className={`confidence-badge ${parsed.confidence > 80 ? 'confidence-high' : parsed.confidence >= 50 ? 'confidence-medium' : 'confidence-low'}`}>
+            {parsed.confidence > 80 ? 'High' : parsed.confidence >= 50 ? 'Medium' : 'Low'}
+          </span>
         </div>
       )}
 
