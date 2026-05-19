@@ -2,6 +2,18 @@ import React from 'react';
 import FeaturePage from '../components/FeaturePage';
 import { getPatients, createPatient, updatePatient, deletePatient } from '../services/api';
 
+function HipaaBanner() {
+  return (
+    <div className="hipaa-banner">
+      <span style={{ fontSize: '16px' }}>&#x1F512;</span>
+      <span>
+        <strong>HIPAA Notice:</strong> This system contains Protected Health Information (PHI). Access is logged and monitored.
+        Unauthorized access or disclosure is prohibited.
+      </span>
+    </div>
+  );
+}
+
 const columns = [
   { key: 'first_name', label: 'First Name' },
   { key: 'last_name', label: 'Last Name' },
@@ -26,15 +38,18 @@ const fields = [
 
 export default function PatientsPage() {
   return (
-    <FeaturePage
-      title="Patient Billing"
-      description="Manage patient information and billing records"
-      columns={columns}
-      fields={fields}
-      fetchAll={getPatients}
-      createItem={createPatient}
-      updateItem={updatePatient}
-      deleteItem={deletePatient}
-    />
+    <div>
+      <HipaaBanner />
+      <FeaturePage
+        title="Patient Billing"
+        description="Manage patient information and billing records"
+        columns={columns}
+        fields={fields}
+        fetchAll={getPatients}
+        createItem={createPatient}
+        updateItem={updatePatient}
+        deleteItem={deletePatient}
+      />
+    </div>
   );
 }

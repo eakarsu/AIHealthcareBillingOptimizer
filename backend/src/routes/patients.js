@@ -4,6 +4,15 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+async function logPhiAccess(userId, entityId, ip) {
+  try {
+    await pool.query(
+      'INSERT INTO audit_trail (user_id, action, entity_type, entity_id, ip_address, created_at) VALUES ($1,$2,$3,$4,$5,NOW())',
+      [userId, 'READ_PHI', 'patient', entityId, ip]
+    );
+  } catch (e) { /* non-fatal */ }
+}
+
 // GET /api/patients
 router.get('/', auth, async (req, res) => {
   try {
@@ -26,6 +35,7 @@ router.get('/', auth, async (req, res) => {
       : 'SELECT COUNT(*) FROM patients';
     const countResult = await pool.query(countQuery, search ? [`%${search}%`] : []);
 
+    await logPhiAccess(req.user?.id, null, req.ip);
     res.json({ data: result.rows, total: parseInt(countResult.rows[0].count), page: parseInt(page), limit: parseInt(limit) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -37,6 +47,7 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM patients WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Patient not found' });
+    await logPhiAccess(req.user?.id, req.params.id, req.ip);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -47,6 +58,9 @@ router.get('/:id', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { first_name, last_name, dob, insurance_provider, insurance_id, phone, email, address, balance_due } = req.body;
+    if (!first_name || !last_name || !dob) {
+      return res.status(400).json({ error: 'first_name, last_name, and dob are required' });
+    }
     const result = await pool.query(
       `INSERT INTO patients (first_name, last_name, dob, insurance_provider, insurance_id, phone, email, address, balance_due)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,

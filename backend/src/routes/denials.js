@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const auth = require('../middleware/auth');
+const aiRateLimiter = require('../middleware/aiRateLimit');
 const { suggestAppeal, analyzeDenialPattern } = require('../services/ai');
 
 const router = express.Router();
@@ -71,8 +72,55 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// POST /api/denials/:id/suggest-appeal - AI suggest appeal (alias)
+router.post('/:id/suggest-appeal', auth, aiRateLimiter, async (req, res) => {
+  try {
+    const denialResult = await pool.query('SELECT d.*, c.* FROM denials d LEFT JOIN claims c ON d.claim_id = c.id WHERE d.id = $1', [req.params.id]);
+    if (denialResult.rows.length === 0) return res.status(404).json({ error: 'Denial not found' });
+
+    const denial = denialResult.rows[0];
+    const analysis = await suggestAppeal(denial);
+
+    await pool.query(
+      `INSERT INTO ai_analysis_results (analysis_type, entity_id, entity_type, input_data, ai_response, model_used, confidence_score, recommendations)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      ['appeal_suggestion', denial.id, 'denial', JSON.stringify(denial), JSON.stringify(analysis.result || analysis),
+       analysis.model || 'unknown', analysis.result?.success_probability || 0, JSON.stringify(analysis.result?.key_arguments || [])]
+    );
+
+    res.json({ denial, analysis: analysis.result || analysis });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/denials/:id/analyze-pattern - AI analyze pattern for specific denial
+router.post('/:id/analyze-pattern', auth, aiRateLimiter, async (req, res) => {
+  try {
+    const denial = await pool.query('SELECT * FROM denials WHERE id = $1', [req.params.id]);
+    if (denial.rows.length === 0) return res.status(404).json({ error: 'Denial not found' });
+
+    const related = await pool.query(
+      'SELECT * FROM denials WHERE denial_code = $1 ORDER BY denial_date DESC LIMIT 20',
+      [denial.rows[0].denial_code]
+    );
+    const analysis = await analyzeDenialPattern(related.rows);
+
+    await pool.query(
+      `INSERT INTO ai_analysis_results (analysis_type, entity_id, entity_type, input_data, ai_response, model_used, confidence_score, recommendations)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      ['denial_pattern', denial.rows[0].id, 'denial', JSON.stringify({ denial_code: denial.rows[0].denial_code, count: related.rows.length }),
+       JSON.stringify(analysis.result || analysis), analysis.model || 'unknown', 0, JSON.stringify(analysis.result?.recommendations || [])]
+    );
+
+    res.json({ denial: denial.rows[0], related_count: related.rows.length, analysis: analysis.result || analysis });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/denials/:id/appeal - AI generate appeal
-router.post('/:id/appeal', auth, async (req, res) => {
+router.post('/:id/appeal', auth, aiRateLimiter, async (req, res) => {
   try {
     const denialResult = await pool.query('SELECT d.*, c.* FROM denials d LEFT JOIN claims c ON d.claim_id = c.id WHERE d.id = $1', [req.params.id]);
     if (denialResult.rows.length === 0) return res.status(404).json({ error: 'Denial not found' });
@@ -94,7 +142,7 @@ router.post('/:id/appeal', auth, async (req, res) => {
 });
 
 // POST /api/denials/analyze-patterns - AI analyze patterns
-router.post('/analyze-patterns', auth, async (req, res) => {
+router.post('/analyze-patterns', auth, aiRateLimiter, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM denials ORDER BY denial_date DESC LIMIT 100');
     const analysis = await analyzeDenialPattern(result.rows);

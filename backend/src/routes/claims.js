@@ -1,9 +1,19 @@
 const express = require('express');
 const pool = require('../db');
 const auth = require('../middleware/auth');
-const { analyzeClaimDenialRisk } = require('../services/ai');
+const aiRateLimiter = require('../middleware/aiRateLimit');
+const { analyzeClaimDenialRisk, predictRevenue } = require('../services/ai');
 
 const router = express.Router();
+
+async function logClaimAccess(userId, entityId, ip) {
+  try {
+    await pool.query(
+      'INSERT INTO audit_trail (user_id, action, entity_type, entity_id, ip_address, created_at) VALUES ($1,$2,$3,$4,$5,NOW())',
+      [userId, 'READ_CLAIM', 'claim', entityId, ip]
+    );
+  } catch (e) { /* non-fatal */ }
+}
 
 // GET /api/claims
 router.get('/', auth, async (req, res) => {
@@ -27,6 +37,7 @@ router.get('/', auth, async (req, res) => {
       : 'SELECT COUNT(*) FROM claims';
     const countResult = await pool.query(countQuery, status ? [status] : []);
 
+    await logClaimAccess(req.user?.id, null, req.ip);
     res.json({
       data: result.rows,
       total: parseInt(countResult.rows[0].count),
@@ -45,6 +56,7 @@ router.get('/:id', auth, async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Claim not found' });
     }
+    await logClaimAccess(req.user?.id, req.params.id, req.ip);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -59,6 +71,10 @@ router.post('/', auth, async (req, res) => {
       cpt_code, icd_code, billed_amount, allowed_amount, paid_amount,
       status, denial_reason, submission_date,
     } = req.body;
+
+    if (!service_date || !billed_amount || !cpt_code) {
+      return res.status(400).json({ error: 'service_date, billed_amount, and cpt_code are required' });
+    }
 
     const result = await pool.query(
       `INSERT INTO claims (patient_name, patient_dob, insurance_id, provider_name, service_date,
@@ -116,8 +132,31 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// POST /api/claims/:id/predict-revenue - AI predict revenue
+router.post('/:id/predict-revenue', auth, aiRateLimiter, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM claims WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Claim not found' });
+    }
+    const claim = result.rows[0];
+    const analysis = await predictRevenue([claim]);
+
+    await pool.query(
+      `INSERT INTO ai_analysis_results (analysis_type, entity_id, entity_type, input_data, ai_response, model_used, confidence_score, recommendations)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      ['revenue_prediction', claim.id, 'claim', JSON.stringify(claim), JSON.stringify(analysis.result || analysis),
+       analysis.model || 'unknown', 0, JSON.stringify(analysis.result?.recommendations || [])]
+    );
+
+    res.json({ claim, analysis: analysis.result || analysis });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/claims/:id/analyze - AI analyze claim denial risk
-router.post('/:id/analyze', auth, async (req, res) => {
+router.post('/:id/analyze', auth, aiRateLimiter, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM claims WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) {
@@ -137,6 +176,29 @@ router.post('/:id/analyze', auth, async (req, res) => {
     );
 
     res.json({ claim, analysis: analysis.result || analysis });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/claims/scrub - AI claim scrubber BEFORE submit
+router.post('/scrub', auth, aiRateLimiter, async (req, res) => {
+  try {
+    const { cpt_code, icd_code, provider_name, billed_amount, insurance_id, patient_dob, service_date } = req.body;
+    if (!cpt_code || !icd_code) {
+      return res.status(400).json({ error: 'cpt_code and icd_code are required for claim scrubbing' });
+    }
+    const { callOpenRouter } = require('../services/ai');
+    const analysis = await callOpenRouter(
+      `You are a healthcare claim scrubber AI. Analyze the claim for errors before submission. Return JSON: {"clean": <boolean>, "issues": [{"type": "error|warning", "code": "", "description": "", "fix": ""}], "modifier_conflicts": [], "ncci_edits": [], "coverage_check": {"likely_covered": true, "notes": ""}, "risk_score": <0-100>, "recommendation": "submit|fix_and_submit|do_not_submit", "estimated_reimbursement": <number>}`,
+      `Scrub this claim:\nCPT: ${cpt_code}\nICD: ${icd_code}\nProvider: ${provider_name || 'Unknown'}\nBilled: $${billed_amount || 0}\nPayer ID: ${insurance_id || 'Unknown'}\nService Date: ${service_date || 'Unknown'}\nPatient DOB: ${patient_dob || 'Unknown'}\nReturn JSON only.`
+    );
+    await pool.query(
+      `INSERT INTO ai_analysis_results (analysis_type, entity_id, entity_type, input_data, ai_response, model_used, confidence_score, recommendations)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      ['claim_scrub', 0, 'claim_draft', JSON.stringify({ cpt_code, icd_code, billed_amount }), JSON.stringify(analysis.result || analysis), analysis.model || 'unknown', 0, JSON.stringify(analysis.result?.issues || [])]
+    );
+    res.json({ scrub_result: analysis.result || analysis });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

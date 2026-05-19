@@ -2,9 +2,18 @@ const fetch = require('node-fetch');
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+function parseAIJson(text) {
+  try { return JSON.parse(text); } catch (e) {}
+  const stripped = text.replace(/```(?:json)?\n?/g, '').trim();
+  try { return JSON.parse(stripped); } catch (e) {}
+  const start = text.indexOf('{'); const end = text.lastIndexOf('}');
+  if (start !== -1 && end !== -1) { try { return JSON.parse(text.slice(start, end + 1)); } catch (e) {} }
+  return null;
+}
+
 async function callOpenRouter(systemPrompt, userPrompt) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5';
+  const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022';
 
   if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
     return { error: 'OpenRouter API key not configured', fallback: true };
@@ -40,14 +49,10 @@ async function callOpenRouter(systemPrompt, userPrompt) {
       return { error: 'No response from AI', fallback: true };
     }
 
-    // Try to parse JSON from response
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return { result: JSON.parse(jsonMatch[0]), raw: content, model };
-      }
-    } catch (e) {
-      // Not JSON, return raw
+    // Try to parse JSON using robust parser
+    const parsed = parseAIJson(content);
+    if (parsed) {
+      return { result: parsed, raw: content, model };
     }
 
     return { result: content, raw: content, model };
@@ -104,6 +109,20 @@ async function predictAging(agingData) {
   return callOpenRouter(systemPrompt, userPrompt);
 }
 
+// ---------- Apply pass 5 backlog ---------- //
+
+async function predictPriorAuth(request) {
+  const systemPrompt = `You are a prior authorization expert. Given a prior-auth request (payer, service, patient_context, supporting_codes, clinical_notes), predict approval likelihood and recommend documentation. Return JSON: approval_probability (0-100), confidence (0-100), likely_objections (array of strings), recommended_documentation (array of strings), suggested_codes (array of strings), turnaround_estimate_days (number), escalation_path (string), summary (string). DISCLAIMER: This is a workflow advisory tool, not clinical advice.`;
+  const userPrompt = `Predict prior auth outcome for this request:\n${JSON.stringify(request, null, 2)}`;
+  return callOpenRouter(systemPrompt, userPrompt);
+}
+
+async function prioritizeClaims(claims) {
+  const systemPrompt = `You are a claims prioritization analyst. Rank a batch of claims by approval likelihood, denial risk, and expected revenue. Return JSON: ranked (array of {claim_id, score (0-100), priority ("urgent","high","medium","low"), reason, expected_revenue, denial_risk, recommended_action}), summary (string), bottlenecks (array of strings).`;
+  const userPrompt = `Prioritize these claims:\n${JSON.stringify(claims, null, 2)}`;
+  return callOpenRouter(systemPrompt, userPrompt);
+}
+
 module.exports = {
   analyzeClaimDenialRisk,
   optimizeCoding,
@@ -113,5 +132,7 @@ module.exports = {
   suggestAppeal,
   analyzePayerContract,
   predictAging,
+  predictPriorAuth,
+  prioritizeClaims,
   callOpenRouter,
 };

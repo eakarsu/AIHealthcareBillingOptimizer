@@ -44,6 +44,7 @@ export const createClaim = (data) => API.post('/claims', data);
 export const updateClaim = (id, data) => API.put(`/claims/${id}`, data);
 export const deleteClaim = (id) => API.delete(`/claims/${id}`);
 export const analyzeClaimDenialRisk = (id) => API.post(`/claims/${id}/analyze`);
+export const predictClaimRevenue = (id) => API.post(`/claims/${id}/predict-revenue`);
 
 // Denials
 export const getDenials = (params) => API.get('/denials', { params });
@@ -52,6 +53,8 @@ export const createDenial = (data) => API.post('/denials', data);
 export const updateDenial = (id, data) => API.put(`/denials/${id}`, data);
 export const deleteDenial = (id) => API.delete(`/denials/${id}`);
 export const generateAppeal = (id) => API.post(`/denials/${id}/appeal`);
+export const suggestAppeal = (id) => API.post(`/denials/${id}/suggest-appeal`);
+export const analyzeDenialPattern = (id) => API.post(`/denials/${id}/analyze-pattern`);
 export const analyzeDenialPatterns = () => API.post('/denials/analyze-patterns');
 
 // Patients
@@ -114,6 +117,7 @@ export const createAgingReport = (data) => API.post('/aging-reports', data);
 export const updateAgingReport = (id, data) => API.put(`/aging-reports/${id}`, data);
 export const deleteAgingReport = (id) => API.delete(`/aging-reports/${id}`);
 export const predictCollections = () => API.post('/aging-reports/predict');
+export const predictCollectionById = (id) => API.post(`/aging-reports/${id}/predict`);
 
 // Coding Optimizations
 export const getCodingOptimizations = (params) => API.get('/coding-optimizations', { params });

@@ -1,6 +1,18 @@
 import React from 'react';
 import FeaturePage from '../components/FeaturePage';
-import { getClaims, createClaim, updateClaim, deleteClaim, analyzeClaimDenialRisk } from '../services/api';
+import { getClaims, createClaim, updateClaim, deleteClaim, analyzeClaimDenialRisk, predictClaimRevenue } from '../services/api';
+
+function HipaaBanner() {
+  return (
+    <div className="hipaa-banner">
+      <span style={{ fontSize: '16px' }}>&#x1F512;</span>
+      <span>
+        <strong>HIPAA Notice:</strong> This system contains Protected Health Information (PHI). Access is logged and monitored.
+        Unauthorized access or disclosure is prohibited.
+      </span>
+    </div>
+  );
+}
 
 const columns = [
   { key: 'patient_name', label: 'Patient Name' },
@@ -27,21 +39,26 @@ const fields = [
 ];
 
 const aiActions = [
-  { label: 'Analyze Denial Risk', handler: analyzeClaimDenialRisk },
+  { label: 'Denial Risk', handler: analyzeClaimDenialRisk },
+  { label: 'Predict Revenue', handler: predictClaimRevenue },
 ];
 
 export default function ClaimsPage() {
   return (
-    <FeaturePage
-      title="Claims Management"
-      description="Manage and track all healthcare claims"
-      columns={columns}
-      fields={fields}
-      fetchAll={getClaims}
-      createItem={createClaim}
-      updateItem={updateClaim}
-      deleteItem={deleteClaim}
-      aiActions={aiActions}
-    />
+    <div>
+      <HipaaBanner />
+      <FeaturePage
+        title="Claims Management"
+        description="Manage and track all healthcare claims"
+        columns={columns}
+        fields={fields}
+        fetchAll={getClaims}
+        createItem={createClaim}
+        updateItem={updateClaim}
+        deleteClaim={deleteClaim}
+        deleteItem={deleteClaim}
+        aiActions={aiActions}
+      />
+    </div>
   );
 }
