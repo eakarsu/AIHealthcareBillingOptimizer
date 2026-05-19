@@ -19,6 +19,7 @@ import AuditTrailPage from './pages/AuditTrailPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AIAnalysisPage from './pages/AIAnalysisPage';
 import AdvancedAIToolsPage from './pages/AdvancedAIToolsPage';
+import CustomViewsPage from './pages/CustomViewsPage';
 import './App.css';
 
 // === Batch 04 Gaps & Frontend Mounts ===
@@ -98,6 +99,7 @@ export default function App() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/ai-analysis" element={<AIAnalysisPage />} />
           <Route path="/advanced-ai" element={<AdvancedAIToolsPage />} />
+          <Route path="/custom-views" element={<CustomViewsPage />} />
           {/* // === Batch 04 Gaps & Frontend Mounts === */}
           <Route path="/cf-agentic-denial-management-autonomously-d" element={<CfAgenticDenialManagementAutonomouslyD />} />
           <Route path="/cf-revenue-cycle-optimization-modeling-clai" element={<CfRevenueCycleOptimizationModelingClai />} />

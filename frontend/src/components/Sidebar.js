@@ -24,6 +24,8 @@ const navItems = [
   { path: '/analytics', label: 'Analytics', icon: '\ud83d\udcc8' },
   { path: '/ai-analysis', label: 'AI Analysis', icon: '\ud83e\udde0' },
   { path: '/advanced-ai', label: 'Advanced AI', icon: '\u26a1' },
+  { section: 'Custom' },
+  { path: '/custom-views', label: 'Billing Views', icon: '\ud83d\udcca' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

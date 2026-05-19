@@ -93,6 +93,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai-analysis', aiAnalysisRoutes);
 app.use('/api/denial-analyzer', require('./routes/denialAnalyzer'));
 app.use('/api/coding-recommender', require('./routes/codingRecommender'));
+app.use('/api/custom-views', require('./routes/customViews'));
 
 // Error handler
 app.use((err, req, res, next) => {
