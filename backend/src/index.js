@@ -40,6 +40,9 @@ const route_gap_no_file_upload_for_clinical_notes = require('../routes/gap-no-fi
 const app = express();
 const PORT = process.env.BACKEND_PORT || 4000;
 
+// Make pool available to gap routes via req.app.get('pool')
+app.set('pool', pool);
+
 // AI Rate limiter: 20 requests per hour
 const aiRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -93,20 +96,10 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai-analysis', aiAnalysisRoutes);
 app.use('/api/denial-analyzer', require('./routes/denialAnalyzer'));
 app.use('/api/coding-recommender', require('./routes/codingRecommender'));
+app.use('/api/charge-capture-reconciliation', require('./routes/chargeCaptureReconciliation'));
 app.use('/api/custom-views', require('./routes/customViews'));
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error', message: err.message });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
-});
-
-
+// === Batch 04 Gap Routes (must be before error/404 handlers) ===
 app.use('/api/gap-no-denial-analyzer-predict-reversals-rec', route_gap_no_denial_analyzer_predict_reversals_rec);
 app.use('/api/gap-no-coding-recommender-suggest-icd-10cpt', route_gap_no_coding_recommender_suggest_icd_10cpt);
 app.use('/api/gap-no-contract-analyzer', route_gap_no_contract_analyzer);
@@ -120,6 +113,17 @@ app.use('/api/gap-no-provider-credential-verification', route_gap_no_provider_cr
 app.use('/api/gap-no-notification-engine-0-references', route_gap_no_notification_engine_0_references);
 app.use('/api/gap-no-webhook-surface-for-payer-event', route_gap_no_webhook_surface_for_payer_event);
 app.use('/api/gap-no-file-upload-for-clinical-notes', route_gap_no_file_upload_for_clinical_notes);
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error', message: err.message });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
 
 app.listen(PORT, () => {
   console.log(`Healthcare Billing Optimizer API running on port ${PORT}`);

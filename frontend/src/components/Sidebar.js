@@ -10,6 +10,7 @@ const navItems = [
   { path: '/denials', label: 'Denial Management', icon: '\u26d4' },
   { path: '/patients', label: 'Patient Billing', icon: '\ud83d\udc65' },
   { path: '/payments', label: 'Payment Tracking', icon: '\ud83d\udcb3' },
+  { path: '/charge-capture-reconciliation', label: 'Charge Capture', icon: '\ud83e\uddee' },
   { path: '/providers', label: 'Provider Management', icon: '\ud83c\udfe5' },
   { section: 'Verification' },
   { path: '/insurance', label: 'Insurance Verification', icon: '\ud83d\udee1\ufe0f' },
@@ -26,6 +27,20 @@ const navItems = [
   { path: '/advanced-ai', label: 'Advanced AI', icon: '\u26a1' },
   { section: 'Custom' },
   { path: '/custom-views', label: 'Billing Views', icon: '\ud83d\udcca' },
+  { section: 'AI Gap Features' },
+  { path: '/gap-no-denial-analyzer-predict-reversals-rec', label: 'Denial Analyzer', icon: '\ud83e\udd16' },
+  { path: '/gap-no-coding-recommender-suggest-icd-10cpt', label: 'Coding Recommender', icon: '\ud83d\udcdd' },
+  { path: '/gap-no-contract-analyzer', label: 'Contract Analyzer', icon: '\ud83d\udcca' },
+  { path: '/gap-no-claim-prioritizer', label: 'Claim Prioritizer', icon: '\ud83d\udd22' },
+  { path: '/gap-no-compliance-risk-checker', label: 'Compliance Risk Checker', icon: '\u26a0\ufe0f' },
+  { path: '/gap-no-prior-auth-approval-likelihood-predic', label: 'Prior Auth Predictor', icon: '\ud83d\udd2e' },
+  { path: '/gap-no-ehr-integration-clinical-data-for', label: 'EHR Integration', icon: '\ud83c\udfe5' },
+  { path: '/gap-no-payer-api-integration-real-time', label: 'Payer API Integration', icon: '\ud83d\udd0c' },
+  { path: '/gap-no-appeal-workflow-automation', label: 'Appeal Workflow', icon: '\ud83d\udd04' },
+  { path: '/gap-no-provider-credential-verification', label: 'Provider Credentials', icon: '\u2714\ufe0f' },
+  { path: '/gap-no-notification-engine-0-references', label: 'Notification Engine', icon: '\ud83d\udd14' },
+  { path: '/gap-no-webhook-surface-for-payer-event', label: 'Webhook Payer Events', icon: '\ud83d\udce1' },
+  { path: '/gap-no-file-upload-for-clinical-notes', label: 'Clinical Notes Upload', icon: '\ud83d\udcc2' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

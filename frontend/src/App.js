@@ -20,6 +20,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import AIAnalysisPage from './pages/AIAnalysisPage';
 import AdvancedAIToolsPage from './pages/AdvancedAIToolsPage';
 import CustomViewsPage from './pages/CustomViewsPage';
+import ChargeCaptureReconciliationPage from './pages/ChargeCaptureReconciliationPage';
 import './App.css';
 
 // === Batch 04 Gaps & Frontend Mounts ===
@@ -42,6 +43,11 @@ import GapNoProviderCredentialVerification from './pages/GapNoProviderCredential
 import GapNoNotificationEngine0References from './pages/GapNoNotificationEngine0References';
 import GapNoWebhookSurfaceForPayerEvent from './pages/GapNoWebhookSurfaceForPayerEvent';
 import GapNoFileUploadForClinicalNotes from './pages/GapNoFileUploadForClinicalNotes';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+
+import TimelineView from './pages/TimelineView';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -74,6 +80,10 @@ export default function App() {
   if (isLogin) {
     return (
       <Routes>
+        <Route path="/insights/timeline" element={<ProtectedRoute><TimelineView /></ProtectedRoute>} />
+        <Route path="/codex/custom-viz" element={<ProtectedRoute><CodexCustomVizFeature /></ProtectedRoute>} />
+        <Route path="/codex/operations" element={<ProtectedRoute><CodexOperationsFeature /></ProtectedRoute>} />
+
         <Route path="/login" element={<LoginPage />} />
       </Routes>
     );
@@ -88,6 +98,7 @@ export default function App() {
           <Route path="/denials" element={<DenialsPage />} />
           <Route path="/patients" element={<PatientsPage />} />
           <Route path="/payments" element={<PaymentsPage />} />
+          <Route path="/charge-capture-reconciliation" element={<ChargeCaptureReconciliationPage />} />
           <Route path="/providers" element={<ProvidersPage />} />
           <Route path="/insurance" element={<InsurancePage />} />
           <Route path="/prior-auth" element={<PriorAuthPage />} />

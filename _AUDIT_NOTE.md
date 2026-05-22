@@ -43,3 +43,35 @@ Syntax: `node --check` passes.
 - **Frontend wiring:** `frontend/src/pages/AdvancedAIToolsPage.js` already exposes all three pass-2 endpoints via tabs and posts with Bearer auth + `AIResultDisplay`. `AIAnalysisPage.js` lists history via `getAIAnalyses()`.
 - **No FE files modified.** Idempotence rule applied.
 - See `_AUDIT/apply3_logs/ab3_60.md` for batch detail.
+
+## Apply pass 6 (close-out)
+
+**Date:** 2026-05-21
+**Scope:** verify the 3 MECHANICAL items previously flagged as deferred backlog.
+
+### Items audited
+1. `POST /api/ai-analysis/claim-prioritizer` — prioritize claims by approval likelihood.
+2. `POST /api/ai-analysis/compliance-checker` — wraps existing `verifyCompliance` helper from `src/services/ai.js`.
+3. `POST /api/ai-analysis/prior-auth-prediction` — predict prior auth approval likelihood.
+
+### Verification
+All three endpoints already implemented in apply pass 5 and present in `backend/src/routes/ai-analysis.js`:
+- `/claim-prioritizer` — lines 267–302. `auth` + `aiRateLimiter`, accepts `{ claims }` / `{ claim_ids }` / falls back to latest pending claims, calls `prioritizeClaims`, persists to `ai_analysis_results` with `analysis_type='claim_prioritizer'`, 503 guard via `response.error && response.fallback`.
+- `/compliance-checker` — lines 185–207. `auth` + `aiRateLimiter`, accepts `{ record, entity_type }`, calls existing `verifyCompliance` helper, persists with `analysis_type='compliance_checker'`, 503 guard present.
+- `/prior-auth-prediction` — lines 304–331. `auth` + `aiRateLimiter`, accepts `{ request }` / `{ prior_auth_id }`, calls `predictPriorAuth`, persists with `analysis_type='prior_auth_prediction'`, 503 guard present.
+
+Single registration each — grep confirmed no duplicates. Mount at `/api/ai-analysis` confirmed in `backend/src/index.js:93`.
+
+### Files touched
+None this pass (close-out verification only — work already landed in pass 5; see `_AUDIT_APPLY5_NOTE.md`).
+
+### Syntax
+- `node --check backend/src/routes/ai-analysis.js` — **PASS**.
+
+### Remaining backlog
+- NEEDS-CREDS: payer APIs (real-time claim status), EHR integration, real-time eligibility / 270-271, payer-specific prior auth submission endpoints.
+- NEEDS-PRODUCT-DECISION: scoring-rubric tuning for `/claim-prioritizer` (currently LLM-ranked).
+- TOO-RISKY: autonomous appeal submission, autonomous prior-auth resubmission.
+
+### Status
+All MECHANICAL backlog items from pass 2 are closed.
