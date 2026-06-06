@@ -28,6 +28,8 @@ const navItems = [
   { section: 'Custom' },
   { path: '/custom-views', label: 'Billing Views', icon: '\ud83d\udcca' },
   { section: 'AI Gap Features' },
+  { path: '/production-gaps', label: 'Production Gaps', icon: '\u26a0\ufe0f' },
+  { path: '/production-controls', label: 'Production Controls', icon: '\ud83d\udee0\ufe0f' },
   { path: '/gap-no-denial-analyzer-predict-reversals-rec', label: 'Denial Analyzer', icon: '\ud83e\udd16' },
   { path: '/gap-no-coding-recommender-suggest-icd-10cpt', label: 'Coding Recommender', icon: '\ud83d\udcdd' },
   { path: '/gap-no-contract-analyzer', label: 'Contract Analyzer', icon: '\ud83d\udcca' },

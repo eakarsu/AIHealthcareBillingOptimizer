@@ -21,6 +21,8 @@ import AIAnalysisPage from './pages/AIAnalysisPage';
 import AdvancedAIToolsPage from './pages/AdvancedAIToolsPage';
 import CustomViewsPage from './pages/CustomViewsPage';
 import ChargeCaptureReconciliationPage from './pages/ChargeCaptureReconciliationPage';
+import ProductionGapsPage from './pages/ProductionGapsPage';
+import ProductionControlsPage from './pages/ProductionControlsPage';
 import './App.css';
 
 // === Batch 04 Gaps & Frontend Mounts ===
@@ -110,6 +112,8 @@ export default function App() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/ai-analysis" element={<AIAnalysisPage />} />
           <Route path="/advanced-ai" element={<AdvancedAIToolsPage />} />
+          <Route path="/production-gaps" element={<ProductionGapsPage />} />
+          <Route path="/production-controls" element={<ProductionControlsPage />} />
           <Route path="/custom-views" element={<CustomViewsPage />} />
           {/* // === Batch 04 Gaps & Frontend Mounts === */}
           <Route path="/cf-agentic-denial-management-autonomously-d" element={<CfAgenticDenialManagementAutonomouslyD />} />
