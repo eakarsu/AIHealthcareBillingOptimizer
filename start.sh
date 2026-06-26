@@ -69,11 +69,21 @@ echo -e "${YELLOW}[3/5] Checking PostgreSQL...${NC}"
 
 # Source .env
 set -a
-source "$PROJECT_DIR/.env"
+if [ -f "$PROJECT_DIR/.env" ]; then
+    source "$PROJECT_DIR/.env"
+fi
 set +a
 
+# Match backend/src/db.js defaults, while also supporting DATABASE_URL-only .env files.
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
+if [ -n "${DATABASE_URL:-}" ]; then
+    DB_HOST="$(node -e "const u=new URL(process.env.DATABASE_URL); console.log(u.hostname || 'localhost')" 2>/dev/null || echo "$DB_HOST")"
+    DB_PORT="$(node -e "const u=new URL(process.env.DATABASE_URL); console.log(u.port || '5432')" 2>/dev/null || echo "$DB_PORT")"
+fi
+
 # Check if PostgreSQL is running
-if ! pg_isready -h $DB_HOST -p $DB_PORT > /dev/null 2>&1; then
+if ! pg_isready -h "$DB_HOST" -p "$DB_PORT" > /dev/null 2>&1; then
     echo -e "  ${RED}PostgreSQL is not running. Attempting to start...${NC}"
     brew services start postgresql@14 2>/dev/null || brew services start postgresql 2>/dev/null || {
         echo -e "  ${RED}Could not start PostgreSQL. Please start it manually.${NC}"
@@ -81,7 +91,7 @@ if ! pg_isready -h $DB_HOST -p $DB_PORT > /dev/null 2>&1; then
     }
     sleep 2
 fi
-echo -e "  ${GREEN}PostgreSQL is running${NC}"
+echo -e "  ${GREEN}PostgreSQL is running at ${DB_HOST}:${DB_PORT}${NC}"
 
 # ---- Step 4: Seed database ----
 echo ""
