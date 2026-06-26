@@ -1,0 +1,17 @@
+.ai-gap-result-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+  margin-top: 18px;
+}
+
+.ai-gap-result-panel .ai-result {
+  animation: none;
+}
+
+.ai-gap-result-panel .ai-result-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-light);
+}

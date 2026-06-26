@@ -23,9 +23,59 @@ function RiskBar({ label, score }) {
   );
 }
 
+function humanizeLabel(value) {
+  return String(value)
+    .replace(/[_-]/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function normalizeList(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(item => {
+    if (typeof item === 'string') return item;
+    return item.finding || item.description || item.text || item.title || item.recommendation || item.action || JSON.stringify(item);
+  });
+}
+
+function NarrativeText({ text }) {
+  const lines = String(text)
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return null;
+
+  return (
+    <div className="ai-narrative">
+      {lines.map((line, index) => {
+        const heading = line.replace(/^#{1,4}\s*/, '');
+        const bullet = line.match(/^[-*]\s+(.+)/);
+        const numbered = line.match(/^(\d+)[.)]\s+(.+)/);
+        const isHeading = /^#{1,4}\s+/.test(line) || (/^[A-Z][A-Za-z\s/&-]+:$/.test(line) && line.length < 70);
+
+        if (isHeading) {
+          return <h4 key={index}>{heading.replace(/:$/, '')}</h4>;
+        }
+
+        if (bullet || numbered) {
+          return (
+            <div key={index} className="ai-narrative-item">
+              <span>{numbered ? index + 1 : '\u2022'}</span>
+              <p>{(bullet && bullet[1]) || (numbered && numbered[2])}</p>
+            </div>
+          );
+        }
+
+        return <p key={index}>{line}</p>;
+      })}
+    </div>
+  );
+}
+
 function parseAIContent(data) {
   // The AI result can come in different shapes. We try to extract structured parts.
   const result = {
+    title: null,
     summary: null,
     riskScores: [],
     recommendations: [],
@@ -33,6 +83,7 @@ function parseAIContent(data) {
     confidence: null,
     appealLetter: null,
     metrics: [],
+    narrativeText: null,
     rawText: null,
   };
 
@@ -48,8 +99,15 @@ function parseAIContent(data) {
   const d = data.data || data.result || data.analysis || data;
 
   if (typeof d === 'string') {
-    result.rawText = d;
+    result.narrativeText = d;
     return result;
+  }
+
+  result.title = d.title || d.feature || null;
+
+  const responseText = d.result || d.response || d.output || d.content || d.ai_response || null;
+  if (typeof responseText === 'string') {
+    result.narrativeText = responseText;
   }
 
   // Summary
@@ -99,6 +157,12 @@ function parseAIContent(data) {
       { title: s.title || s.suggestion || '', description: s.description || '' }
     );
   }
+  if (Array.isArray(d.action_plan)) {
+    result.recommendations = normalizeList(d.action_plan).map(item => ({ title: item, description: '' }));
+  }
+  if (Array.isArray(d.next_steps)) {
+    result.recommendations = normalizeList(d.next_steps).map(item => ({ title: item, description: '' }));
+  }
 
   // Findings
   if (Array.isArray(d.findings)) {
@@ -110,6 +174,12 @@ function parseAIContent(data) {
   if (Array.isArray(d.key_findings)) {
     result.findings = d.key_findings.map(f => typeof f === 'string' ? f : f.finding || JSON.stringify(f));
   }
+  if (Array.isArray(d.assumptions)) {
+    result.findings = [...result.findings, ...normalizeList(d.assumptions).map(item => `Assumption: ${item}`)];
+  }
+  if (Array.isArray(d.follow_up_questions)) {
+    result.findings = [...result.findings, ...normalizeList(d.follow_up_questions).map(item => `Follow-up: ${item}`)];
+  }
 
   // Appeal letter
   if (d.appeal_letter || d.appeal || d.letter) {
@@ -120,7 +190,7 @@ function parseAIContent(data) {
   if (d.metrics && typeof d.metrics === 'object' && !Array.isArray(d.metrics)) {
     Object.entries(d.metrics).forEach(([k, v]) => {
       result.metrics.push({
-        label: k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        label: humanizeLabel(k),
         value: typeof v === 'number' ? (v > 1000 ? '$' + v.toLocaleString() : v) : v,
       });
     });
@@ -143,7 +213,8 @@ function parseAIContent(data) {
 
   // If nothing was parsed, show raw
   const hasContent = result.summary || result.riskScores.length || result.recommendations.length ||
-    result.findings.length || result.confidence !== null || result.appealLetter || result.metrics.length;
+    result.findings.length || result.confidence !== null || result.appealLetter || result.metrics.length ||
+    result.narrativeText;
 
   if (!hasContent) {
     result.rawText = JSON.stringify(d, null, 2);
@@ -186,13 +257,17 @@ export default function AIResultDisplay({ result, loading }) {
       <div className="ai-result-header">
         <div className="ai-result-header-icon">{'\ud83e\udde0'}</div>
         <div>
-          <h3>AI Analysis Results</h3>
+          <h3>{parsed.title || 'AI Analysis Results'}</h3>
           <span>Powered by AI Healthcare Intelligence</span>
         </div>
       </div>
 
       {parsed.summary && (
         <div className="ai-summary">{parsed.summary}</div>
+      )}
+
+      {parsed.narrativeText && (
+        <NarrativeText text={parsed.narrativeText} />
       )}
 
       {parsed.confidence !== null && (

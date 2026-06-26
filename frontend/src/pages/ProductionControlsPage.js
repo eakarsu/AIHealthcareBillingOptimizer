@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './ProductionWorkspace.css';
 
 const controls = [
   ['Enterprise Identity & Access', 'Security', 'SSO/MFA rollout, role mapping, access reviews, and break-glass owner tracking', 'In progress'],
@@ -14,7 +15,7 @@ export default function ProductionControlsPage() {
   const [selected, setSelected] = useState(controls[0]);
 
   return (
-    <div className="page">
+    <div className="workspace-page">
       <div className="page-header">
         <div>
           <h1>Production Controls</h1>
@@ -28,14 +29,18 @@ export default function ProductionControlsPage() {
         <div className="metric-card"><span>Launch Gate</span><strong>Active</strong><small>Tests and audit evidence</small></div>
       </div>
 
-      <div className="content-card" style={{ marginTop: 20 }}>
-        <h2>{selected[0]}</h2>
-        <p><strong>Domain:</strong> {selected[1]}</p>
-        <p>{selected[2]}</p>
-        <p><strong>Status:</strong> {selected[3]}</p>
+      <div className="content-card selected-summary">
+        <div>
+          <h2>{selected[0]}</h2>
+          <p>{selected[2]}</p>
+          <div className="summary-meta">
+            <span className="badge badge-blue">Domain: {selected[1]}</span>
+            <span className="badge badge-yellow">{selected[3]}</span>
+          </div>
+        </div>
       </div>
 
-      <div className="content-card" style={{ marginTop: 20 }}>
+      <div className="content-card table-shell">
         <table className="data-table">
           <thead>
             <tr>
@@ -47,7 +52,7 @@ export default function ProductionControlsPage() {
           </thead>
           <tbody>
             {controls.map((row) => (
-              <tr key={row[0]} onClick={() => setSelected(row)} style={{ cursor: 'pointer' }}>
+              <tr key={row[0]} onClick={() => setSelected(row)} className={selected[0] === row[0] ? 'is-selected' : ''} style={{ cursor: 'pointer' }}>
                 <td><strong>{row[0]}</strong></td>
                 <td>{row[1]}</td>
                 <td>{row[2]}</td>
