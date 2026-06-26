@@ -11,7 +11,7 @@
 # 5. Starts frontend with hot-reload (React dev server)
 # ============================================================
 
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -24,6 +24,9 @@ NC='\033[0m' # No Color
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_PORT=4000
 FRONTEND_PORT=3001
+LOG_DIR="$PROJECT_DIR/logs"
+BACKEND_LOG="$LOG_DIR/backend.log"
+FRONTEND_LOG="$LOG_DIR/frontend.log"
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
@@ -54,11 +57,11 @@ cleanup_port $FRONTEND_PORT
 echo ""
 echo -e "${YELLOW}[2/5] Installing backend dependencies...${NC}"
 cd "$PROJECT_DIR/backend"
-npm install --silent 2>&1 | tail -1
+npm install
 
 echo -e "${YELLOW}[2/5] Installing frontend dependencies...${NC}"
 cd "$PROJECT_DIR/frontend"
-npm install --silent 2>&1 | tail -1
+npm install
 
 # ---- Step 3: Check PostgreSQL ----
 echo ""
@@ -90,6 +93,9 @@ echo -e "  ${GREEN}Database seeded successfully${NC}"
 # ---- Step 5: Start servers with hot reload ----
 echo ""
 echo -e "${YELLOW}[5/5] Starting servers with hot-reload...${NC}"
+mkdir -p "$LOG_DIR"
+: > "$BACKEND_LOG"
+: > "$FRONTEND_LOG"
 
 # Trap to cleanup background processes on exit
 cleanup() {
@@ -103,29 +109,65 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
+show_recent_logs() {
+    echo ""
+    echo -e "${RED}Recent backend log:${NC}"
+    tail -80 "$BACKEND_LOG" 2>/dev/null || true
+    echo ""
+    echo -e "${RED}Recent frontend log:${NC}"
+    tail -80 "$FRONTEND_LOG" 2>/dev/null || true
+}
+
+ensure_running() {
+    local pid=$1
+    local name=$2
+    local log_file=$3
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo -e "${RED}${name} exited during startup. Full log: ${log_file}${NC}"
+        tail -120 "$log_file" 2>/dev/null || true
+        exit 1
+    fi
+}
+
+wait_for_url() {
+    local name=$1
+    local url=$2
+    local pid=$3
+    local log_file=$4
+    local attempts=${5:-60}
+
+    echo -e "  ${CYAN}Waiting for ${name}: ${url}${NC}"
+    for ((i=1; i<=attempts; i++)); do
+        ensure_running "$pid" "$name" "$log_file"
+        if curl -fsS "$url" > /dev/null 2>&1; then
+            echo -e "  ${GREEN}${name} is ready${NC}"
+            return 0
+        fi
+        sleep 1
+    done
+
+    echo -e "${RED}${name} did not become ready after ${attempts}s. Full log: ${log_file}${NC}"
+    tail -160 "$log_file" 2>/dev/null || true
+    exit 1
+}
+
 # Start backend with nodemon for hot reload
 echo -e "  ${BLUE}Starting backend on port ${BACKEND_PORT} (with nodemon hot-reload)...${NC}"
 cd "$PROJECT_DIR/backend"
-npx nodemon --watch src --ext js,json src/index.js &
+npx nodemon --watch src --ext js,json src/index.js 2>&1 | tee "$BACKEND_LOG" &
 BACKEND_PID=$!
 
 # Wait for backend to be ready
-echo -e "  ${CYAN}Waiting for backend to be ready...${NC}"
-for i in {1..30}; do
-    if curl -s http://localhost:$BACKEND_PORT/api/analytics/dashboard > /dev/null 2>&1; then
-        break
-    fi
-    sleep 1
-done
+wait_for_url "backend" "http://localhost:$BACKEND_PORT/api/health" "$BACKEND_PID" "$BACKEND_LOG" 60
 
 # Start frontend with React dev server (has built-in hot reload)
 echo -e "  ${BLUE}Starting frontend on port ${FRONTEND_PORT} (with hot-reload)...${NC}"
 cd "$PROJECT_DIR/frontend"
-BROWSER=none PORT=$FRONTEND_PORT npm start &
+BROWSER=none PORT=$FRONTEND_PORT npm start 2>&1 | tee "$FRONTEND_LOG" &
 FRONTEND_PID=$!
 
-# Wait for frontend
-sleep 5
+# Wait for frontend readiness instead of assuming success after a fixed sleep.
+wait_for_url "frontend" "http://localhost:$FRONTEND_PORT" "$FRONTEND_PID" "$FRONTEND_LOG" 90
 
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
@@ -133,6 +175,10 @@ echo -e "${GREEN}║  Application is running!                                 �
 echo -e "${GREEN}║                                                          ║${NC}"
 echo -e "${GREEN}║  Frontend:  http://localhost:${FRONTEND_PORT}                        ║${NC}"
 echo -e "${GREEN}║  Backend:   http://localhost:${BACKEND_PORT}                        ║${NC}"
+echo -e "${GREEN}║                                                          ║${NC}"
+echo -e "${GREEN}║  Live logs:                                              ║${NC}"
+echo -e "${GREEN}║    Backend:  logs/backend.log                            ║${NC}"
+echo -e "${GREEN}║    Frontend: logs/frontend.log                           ║${NC}"
 echo -e "${GREEN}║                                                          ║${NC}"
 echo -e "${GREEN}║  Demo Login:                                             ║${NC}"
 echo -e "${GREEN}║    Email:    admin@healthbilling.com                     ║${NC}"
@@ -143,4 +189,8 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 
 # Keep script running and forward signals
-wait
+wait $BACKEND_PID $FRONTEND_PID || {
+    echo -e "${RED}One of the servers exited. Showing recent logs.${NC}"
+    show_recent_logs
+    exit 1
+}
