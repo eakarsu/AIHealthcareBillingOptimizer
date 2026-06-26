@@ -126,6 +126,14 @@ app.use('/api/gap-no-notification-engine-0-references', route_gap_no_notificatio
 app.use('/api/gap-no-webhook-surface-for-payer-event', route_gap_no_webhook_surface_for_payer_event);
 app.use('/api/gap-no-file-upload-for-clinical-notes', route_gap_no_file_upload_for_clinical_notes);
 
+// === Custom Feature (cf-*) Routes — frontend pages existed but backend was missing ===
+app.use('/api/cf-agentic-denial-management-autonomously-d', require('../routes/cf-agentic-denial-management-autonomously-d'));
+app.use('/api/cf-revenue-cycle-optimization-modeling-clai', require('../routes/cf-revenue-cycle-optimization-modeling-clai'));
+app.use('/api/cf-payer-contract-intelligence-identifying-', require('../routes/cf-payer-contract-intelligence-identifying-'));
+app.use('/api/cf-prior-auth-automation-submitting-followi', require('../routes/cf-prior-auth-automation-submitting-followi'));
+app.use('/api/cf-coding-quality-compliance-auditor-flaggi', require('../routes/cf-coding-quality-compliance-auditor-flaggi'));
+app.use('/api/cf-patient-payment-intelligence-predicting-', require('../routes/cf-patient-payment-intelligence-predicting-'));
+
 // Error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
