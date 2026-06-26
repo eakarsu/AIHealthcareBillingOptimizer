@@ -3,30 +3,29 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
+const {
+  getConnectionFields,
+  getTargetDatabaseName,
+  quoteIdentifier,
+} = require('../dbConfig');
 
-const DB_NAME = process.env.DB_NAME || 'healthcare_billing';
+const DB_NAME = getTargetDatabaseName();
 
 async function seed() {
   // Connect to default 'postgres' db to create/drop the target database
-  const adminPool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    database: 'postgres',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-  });
+  const adminPool = new Pool(getConnectionFields('postgres'));
 
   try {
     // Terminate existing connections to the database
     await adminPool.query(`
       SELECT pg_terminate_backend(pg_stat_activity.pid)
       FROM pg_stat_activity
-      WHERE pg_stat_activity.datname = '${DB_NAME}' AND pid <> pg_backend_pid()
-    `);
+      WHERE pg_stat_activity.datname = $1 AND pid <> pg_backend_pid()
+    `, [DB_NAME]);
 
     // Drop and recreate database
-    await adminPool.query(`DROP DATABASE IF EXISTS ${DB_NAME}`);
-    await adminPool.query(`CREATE DATABASE ${DB_NAME}`);
+    await adminPool.query(`DROP DATABASE IF EXISTS ${quoteIdentifier(DB_NAME)}`);
+    await adminPool.query(`CREATE DATABASE ${quoteIdentifier(DB_NAME)}`);
     console.log(`Database ${DB_NAME} created successfully.`);
   } catch (err) {
     console.error('Error creating database:', err.message);
@@ -36,13 +35,7 @@ async function seed() {
   }
 
   // Connect to the newly created database
-  const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    database: DB_NAME,
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-  });
+  const pool = new Pool(getConnectionFields(DB_NAME));
 
   try {
     // Create all tables

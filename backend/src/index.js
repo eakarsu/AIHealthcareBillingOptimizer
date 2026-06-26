@@ -39,6 +39,10 @@ const route_gap_no_webhook_surface_for_payer_event = require('../routes/gap-no-w
 const route_gap_no_file_upload_for_clinical_notes = require('../routes/gap-no-file-upload-for-clinical-notes');
 const app = express();
 const PORT = process.env.BACKEND_PORT || 4000;
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_URL || 'http://localhost:3000,http://localhost:3001')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 
 // Make pool available to gap routes via req.app.get('pool')
 app.set('pool', pool);
@@ -54,7 +58,15 @@ app.set('aiRateLimiter', aiRateLimiter);
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked origin: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // HIPAA Audit trail middleware - auto-log mutating operations

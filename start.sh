@@ -50,6 +50,36 @@ cleanup_port() {
     fi
 }
 
+cleanup_project_processes() {
+    local pids
+    pids=$(ps -axo pid=,command= | awk -v project="$PROJECT_DIR" -v self="$$" '
+        $1 != self &&
+        index($0, project) > 0 &&
+        ($0 ~ /nodemon/ || $0 ~ /react-scripts/ || $0 ~ /src\/index\.js/ || $0 ~ /logs\/backend\.log/ || $0 ~ /logs\/frontend\.log/) {
+            print $1
+        }
+    ' | sort -u)
+
+    if [ -n "$pids" ]; then
+        echo -e "  ${RED}Killing stale project dev processes: $pids${NC}"
+        echo "$pids" | xargs kill 2>/dev/null || true
+        sleep 1
+        pids=$(ps -axo pid=,command= | awk -v project="$PROJECT_DIR" -v self="$$" '
+            $1 != self &&
+            index($0, project) > 0 &&
+            ($0 ~ /nodemon/ || $0 ~ /react-scripts/ || $0 ~ /src\/index\.js/ || $0 ~ /logs\/backend\.log/ || $0 ~ /logs\/frontend\.log/) {
+                print $1
+            }
+        ' | sort -u)
+        if [ -n "$pids" ]; then
+            echo "$pids" | xargs kill -9 2>/dev/null || true
+        fi
+    else
+        echo -e "  ${GREEN}No stale project dev processes found${NC}"
+    fi
+}
+
+cleanup_project_processes
 cleanup_port $BACKEND_PORT
 cleanup_port $FRONTEND_PORT
 
