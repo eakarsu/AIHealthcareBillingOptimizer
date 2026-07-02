@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
+import ChatbotWidget from './components/ChatbotWidget';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import ClaimsPage from './pages/ClaimsPage';
@@ -23,6 +24,8 @@ import CustomViewsPage from './pages/CustomViewsPage';
 import ChargeCaptureReconciliationPage from './pages/ChargeCaptureReconciliationPage';
 import ProductionGapsPage from './pages/ProductionGapsPage';
 import ProductionControlsPage from './pages/ProductionControlsPage';
+import IntegrationsPage from './pages/IntegrationsPage';
+import ChatbotPage from './pages/ChatbotPage';
 import './App.css';
 
 // === Batch 04 Gaps & Frontend Mounts ===
@@ -71,6 +74,7 @@ function AppLayout({ children }) {
           {children}
         </div>
       </div>
+      <ChatbotWidget />
     </div>
   );
 }
@@ -112,8 +116,10 @@ export default function App() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/ai-analysis" element={<AIAnalysisPage />} />
           <Route path="/advanced-ai" element={<AdvancedAIToolsPage />} />
+          <Route path="/chatbot" element={<ChatbotPage />} />
           <Route path="/production-gaps" element={<ProductionGapsPage />} />
           <Route path="/production-controls" element={<ProductionControlsPage />} />
+          <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/custom-views" element={<CustomViewsPage />} />
           {/* // === Batch 04 Gaps & Frontend Mounts === */}
           <Route path="/cf-agentic-denial-management-autonomously-d" element={<CfAgenticDenialManagementAutonomouslyD />} />

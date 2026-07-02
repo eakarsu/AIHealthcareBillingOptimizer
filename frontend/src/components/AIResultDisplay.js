@@ -29,11 +29,81 @@ function humanizeLabel(value) {
     .replace(/\b\w/g, letter => letter.toUpperCase());
 }
 
+function parseMaybeJson(value) {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+
+  const cleaned = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
+  const candidates = [cleaned];
+  const objectStart = cleaned.indexOf('{');
+  const objectEnd = cleaned.lastIndexOf('}');
+  if (objectStart >= 0 && objectEnd > objectStart) {
+    candidates.push(cleaned.slice(objectStart, objectEnd + 1));
+  }
+  const arrayStart = cleaned.indexOf('[');
+  const arrayEnd = cleaned.lastIndexOf(']');
+  if (arrayStart >= 0 && arrayEnd > arrayStart) {
+    candidates.push(cleaned.slice(arrayStart, arrayEnd + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch (e) {
+      // Continue trying less strict slices.
+    }
+  }
+
+  return value;
+}
+
+function unwrapAIData(data) {
+  let current = data;
+  const seen = new Set();
+
+  while (current && typeof current === 'object' && !Array.isArray(current) && !seen.has(current)) {
+    seen.add(current);
+    if (current.result !== undefined) {
+      const parsed = parseMaybeJson(current.result);
+      if (current.title || current.feature) return { ...current, result: parsed };
+      if (parsed !== current.result) return parsed;
+      if (Object.keys(current).length <= 4) return current.result;
+    }
+    if (current.ai_response !== undefined) {
+      const parsed = parseMaybeJson(current.ai_response);
+      if (parsed !== current.ai_response) return parsed;
+    }
+    if (current.data !== undefined && Object.keys(current).length <= 4) {
+      current = parseMaybeJson(current.data);
+      continue;
+    }
+    if (current.analysis !== undefined && Object.keys(current).length <= 4) {
+      current = parseMaybeJson(current.analysis);
+      continue;
+    }
+    break;
+  }
+
+  return parseMaybeJson(current);
+}
+
+function formatValue(value) {
+  if (value === null || value === undefined || value === '') return 'Not provided';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'number') return Number.isInteger(value) ? value.toLocaleString() : value.toFixed(2);
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(formatValue).join(', ');
+  return Object.entries(value)
+    .map(([key, item]) => `${humanizeLabel(key)}: ${formatValue(item)}`)
+    .join('; ');
+}
+
 function normalizeList(value) {
   if (!Array.isArray(value)) return [];
   return value.map(item => {
     if (typeof item === 'string') return item;
-    return item.finding || item.description || item.text || item.title || item.recommendation || item.action || JSON.stringify(item);
+    return item.finding || item.description || item.text || item.title || item.recommendation || item.action || formatValue(item);
   });
 }
 
@@ -85,18 +155,22 @@ function parseAIContent(data) {
     metrics: [],
     narrativeText: null,
     rawText: null,
+    structuredSections: [],
   };
 
   if (!data) return result;
 
   // Handle string response
-  if (typeof data === 'string') {
-    result.rawText = data;
+  const unwrapped = unwrapAIData(data);
+  const parsedString = parseMaybeJson(unwrapped);
+
+  if (typeof parsedString === 'string') {
+    result.narrativeText = parsedString;
     return result;
   }
 
   // Direct fields
-  const d = data.data || data.result || data.analysis || data;
+  const d = parsedString;
 
   if (typeof d === 'string') {
     result.narrativeText = d;
@@ -105,9 +179,11 @@ function parseAIContent(data) {
 
   result.title = d.title || d.feature || null;
 
-  const responseText = d.result || d.response || d.output || d.content || d.ai_response || null;
+  const responseText = parseMaybeJson(d.result || d.response || d.output || d.content || d.ai_response || null);
   if (typeof responseText === 'string') {
     result.narrativeText = responseText;
+  } else if (responseText && typeof responseText === 'object') {
+    Object.assign(d, responseText);
   }
 
   // Summary
@@ -148,7 +224,7 @@ function parseAIContent(data) {
   if (Array.isArray(d.recommendations)) {
     result.recommendations = d.recommendations.map(r =>
       typeof r === 'string' ? { title: r, description: '' } :
-      { title: r.title || r.recommendation || r.action || '', description: r.description || r.details || r.reason || '' }
+      { title: r.title || r.recommendation || r.action || r.step || formatValue(r), description: r.description || r.details || r.reason || r.rationale || '' }
     );
   }
   if (Array.isArray(d.suggestions)) {
@@ -166,13 +242,13 @@ function parseAIContent(data) {
 
   // Findings
   if (Array.isArray(d.findings)) {
-    result.findings = d.findings.map(f => typeof f === 'string' ? f : f.finding || f.description || f.text || JSON.stringify(f));
+    result.findings = d.findings.map(f => typeof f === 'string' ? f : f.finding || f.description || f.text || formatValue(f));
   }
   if (Array.isArray(d.issues)) {
-    result.findings = d.issues.map(f => typeof f === 'string' ? f : f.issue || f.description || JSON.stringify(f));
+    result.findings = d.issues.map(f => typeof f === 'string' ? f : f.issue || f.description || formatValue(f));
   }
   if (Array.isArray(d.key_findings)) {
-    result.findings = d.key_findings.map(f => typeof f === 'string' ? f : f.finding || JSON.stringify(f));
+    result.findings = d.key_findings.map(f => typeof f === 'string' ? f : f.finding || formatValue(f));
   }
   if (Array.isArray(d.assumptions)) {
     result.findings = [...result.findings, ...normalizeList(d.assumptions).map(item => `Assumption: ${item}`)];
@@ -211,19 +287,118 @@ function parseAIContent(data) {
     result.metrics.push({ label: 'Revenue Change', value: '$' + parseFloat(d.potential_revenue_change).toLocaleString() });
   }
 
+  const handledKeys = new Set([
+    'title', 'feature', 'summary', 'description', 'overview', 'analysis_summary', 'result', 'response',
+    'output', 'content', 'ai_response', 'risk_score', 'denial_risk', 'compliance_risk', 'risk_scores',
+    'risk_level', 'confidence', 'ai_confidence', 'recommendations', 'suggestions', 'action_plan',
+    'next_steps', 'findings', 'issues', 'key_findings', 'assumptions', 'follow_up_questions',
+    'appeal_letter', 'appeal', 'letter', 'metrics', 'predicted_revenue', 'potential_savings',
+    'collection_probability', 'revenue_impact', 'potential_revenue_change', 'model', 'domain',
+    'severity', 'category', 'integration',
+  ]);
+
+  if (d && typeof d === 'object' && !Array.isArray(d)) {
+    result.structuredSections = Object.entries(d)
+      .filter(([key, value]) => !handledKeys.has(key) && value !== null && value !== undefined && value !== '')
+      .map(([key, value]) => ({ title: humanizeLabel(key), value }));
+  } else if (Array.isArray(d)) {
+    result.structuredSections = [{ title: 'Results', value: d }];
+  }
+
   // If nothing was parsed, show raw
   const hasContent = result.summary || result.riskScores.length || result.recommendations.length ||
     result.findings.length || result.confidence !== null || result.appealLetter || result.metrics.length ||
-    result.narrativeText;
+    result.narrativeText || result.structuredSections.length;
 
   if (!hasContent) {
-    result.rawText = JSON.stringify(d, null, 2);
+    result.rawText = formatValue(d);
   }
 
   return result;
 }
 
 const recIcons = ['\u2705', '\ud83d\udca1', '\ud83d\udcdd', '\u26a0\ufe0f', '\ud83d\udd27', '\ud83d\udcca', '\ud83d\udee1\ufe0f', '\ud83c\udfaf'];
+
+function isPrimitive(value) {
+  return value === null || value === undefined || ['string', 'number', 'boolean'].includes(typeof value);
+}
+
+function ObjectTable({ value }) {
+  const entries = Object.entries(value || {}).filter(([, item]) => item !== null && item !== undefined && item !== '');
+  if (entries.length === 0) return <p className="ai-empty">No details provided.</p>;
+
+  return (
+    <div className="ai-kv-grid">
+      {entries.map(([key, item]) => (
+        <div key={key} className="ai-kv-item">
+          <span className="ai-kv-label">{humanizeLabel(key)}</span>
+          <span className="ai-kv-value">{isPrimitive(item) ? formatValue(item) : <StructuredValue value={item} compact />}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ArrayTable({ value }) {
+  if (!Array.isArray(value) || value.length === 0) return <p className="ai-empty">No items provided.</p>;
+  const objectItems = value.filter(item => item && typeof item === 'object' && !Array.isArray(item));
+  const objectKeys = Array.from(new Set(objectItems.flatMap(item => Object.keys(item)))).slice(0, 6);
+
+  if (objectItems.length === value.length && objectKeys.length > 1) {
+    return (
+      <div className="ai-structured-table-wrap">
+        <table className="ai-structured-table">
+          <thead>
+            <tr>
+              {objectKeys.map(key => <th key={key}>{humanizeLabel(key)}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {value.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {objectKeys.map(key => <td key={key}>{formatValue(row[key])}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ai-structured-list">
+      {value.map((item, index) => (
+        <div key={index} className="ai-structured-list-item">
+          <span className="ai-list-index">{index + 1}</span>
+          <div>{isPrimitive(item) ? formatValue(item) : <StructuredValue value={item} compact />}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StructuredValue({ value, compact = false }) {
+  const parsed = parseMaybeJson(value);
+  if (isPrimitive(parsed)) {
+    return <span>{formatValue(parsed)}</span>;
+  }
+  if (Array.isArray(parsed)) {
+    return <ArrayTable value={parsed} />;
+  }
+  if (compact) {
+    return <ObjectTable value={parsed} />;
+  }
+  return <ObjectTable value={parsed} />;
+}
+
+function StructuredSection({ section }) {
+  return (
+    <div className="ai-structured-section">
+      <div className="ai-section-title">{section.title}</div>
+      <StructuredValue value={section.value} />
+    </div>
+  );
+}
 
 export default function AIResultDisplay({ result, loading }) {
   if (loading) {
@@ -348,10 +523,18 @@ export default function AIResultDisplay({ result, loading }) {
         </div>
       )}
 
+      {parsed.structuredSections.length > 0 && (
+        <div className="ai-structured">
+          {parsed.structuredSections.map((section, index) => (
+            <StructuredSection key={`${section.title}-${index}`} section={section} />
+          ))}
+        </div>
+      )}
+
       {parsed.rawText && (
         <div>
-          <div className="ai-section-title">Full Response</div>
-          <pre className="ai-raw">{parsed.rawText}</pre>
+          <div className="ai-section-title">Additional Details</div>
+          <div className="ai-raw">{parsed.rawText}</div>
         </div>
       )}
     </div>

@@ -65,4 +65,59 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+// PUT /api/audit-trail/:id
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const {
+      user_id,
+      action,
+      entity_type,
+      entity_id,
+      ip_address,
+      old_values,
+      new_values,
+    } = req.body;
+
+    const parseJson = (value) => {
+      if (value === '' || value === undefined) return null;
+      if (typeof value === 'string') {
+        try { return JSON.parse(value); } catch (e) { return value; }
+      }
+      return value;
+    };
+
+    const result = await pool.query(
+      `UPDATE audit_trail
+       SET user_id=$1, action=$2, entity_type=$3, entity_id=$4, ip_address=$5, old_values=$6, new_values=$7
+       WHERE id=$8 RETURNING *`,
+      [
+        user_id || null,
+        action || null,
+        entity_type || null,
+        entity_id || null,
+        ip_address || null,
+        parseJson(old_values),
+        parseJson(new_values),
+        req.params.id,
+      ]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Audit trail entry not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/audit-trail/:id
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM audit_trail WHERE id = $1 RETURNING id', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Audit trail entry not found' });
+    res.json({ message: 'Audit entry deleted', id: result.rows[0].id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

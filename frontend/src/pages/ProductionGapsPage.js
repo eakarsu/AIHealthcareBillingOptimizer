@@ -1,71 +1,145 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import AIResultDisplay from '../components/AIResultDisplay';
+import { analyzeFeatureGap, getFeatureGaps } from '../services/api';
 import './ProductionWorkspace.css';
 
-const rows = [
-  ['Claim Lifecycle Timeline', 'Claims', 'Encounter to payment timeline with adjudication and denial stages', 'Implemented surface'],
-  ['837 Submission Monitor', 'Claims', 'Batch status, 999/277CA acknowledgments, and rejection repair queue', 'Implemented surface'],
-  ['835 ERA Parser', 'Payments', 'Remit ingestion, CARC/RARC mapping, and payment posting variance review', 'Implemented surface'],
-  ['Eligibility 270/271', 'Verification', 'Coverage, deductible, OOP, plan rules, and benefit snapshots', 'Implemented surface'],
-  ['Claim Scrubber Rules', 'Coding', 'Payer edits, missing data checks, clean-claim score, and repair workflow', 'Implemented surface'],
-  ['NCCI/MUE Edit Engine', 'Coding', 'Procedure/unit edits with modifier validation and clinical evidence support', 'Implemented surface'],
-  ['Underpayment Detection', 'Payments', 'Contracted rate comparison and expected reimbursement variance queue', 'Implemented surface'],
-  ['Unapplied Cash Workqueue', 'Payments', 'Lockbox, ERA, and manual cash matching exceptions', 'Implemented surface'],
-  ['Appeals Packet Builder', 'Denials', 'Letter, evidence, deadline, reviewer assignment, and resubmission tracking', 'Implemented surface'],
-  ['Denial Root Cause Analytics', 'Denials', 'Preventable denial classification by payer, provider, procedure, and team', 'Implemented surface'],
-  ['Patient Statement Engine', 'Patient Billing', 'Statement cycles, suppression, estimates, payment plans, and collections routing', 'Implemented surface'],
-  ['Provider Credential Verification', 'Provider Ops', 'Enrollment, taxonomy, NPI, roster, and payer credential status', 'Implemented surface'],
-  ['Payer Portal Automation', 'Integrations', 'Status polling, document upload, credential vault, and manual fallback queue', 'Implemented surface'],
-  ['EHR Clinical Evidence Feed', 'Integrations', 'Clinical note, lab, imaging, and diagnosis support ingestion', 'Implemented surface'],
-  ['Notification Delivery Ledger', 'Platform', 'Email, SMS, webhook, failed delivery retries, and escalation rules', 'Implemented surface'],
-  ['HIPAA Audit Controls', 'Security', 'PHI access logging, redaction, role review, and evidence export', 'Implemented surface'],
-];
-
 export default function ProductionGapsPage() {
-  const [selected, setSelected] = useState(rows[0]);
+  const [rows, setRows] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [context, setContext] = useState('');
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [domainFilter, setDomainFilter] = useState('All');
+  const [severityFilter, setSeverityFilter] = useState('All');
+
+  useEffect(() => {
+    let mounted = true;
+    getFeatureGaps()
+      .then((res) => {
+        if (!mounted) return;
+        const data = res.data?.data || [];
+        setRows(data);
+        setSelected(data[0] || null);
+      })
+      .catch((err) => setError(err.response?.data?.error || err.message || 'Failed to load feature gaps'));
+    return () => { mounted = false; };
+  }, []);
+
+  const counts = useMemo(() => {
+    const critical = rows.filter(row => row.severity === 'Critical').length;
+    const integration = rows.filter(row => row.domain === 'Integrations' || row.capability?.toLowerCase().includes('connector')).length;
+    return { critical, integration };
+  }, [rows]);
+
+  const domains = useMemo(() => ['All', ...Array.from(new Set(rows.map(row => row.domain))).sort()], [rows]);
+  const severities = useMemo(() => ['All', 'Critical', 'High', 'Medium'], []);
+  const filteredRows = useMemo(() => rows.filter((row) => {
+    const domainMatch = domainFilter === 'All' || row.domain === domainFilter;
+    const severityMatch = severityFilter === 'All' || row.severity === severityFilter;
+    return domainMatch && severityMatch;
+  }), [domainFilter, rows, severityFilter]);
+
+  const selectRow = (row) => {
+    setSelected(row);
+    setResult(null);
+    setError('');
+  };
+
+  const runGapAnalysis = async () => {
+    if (!selected) return;
+    setLoading(true);
+    setError('');
+    setResult(null);
+    try {
+      const res = await analyzeFeatureGap(selected.slug, context);
+      setResult(res.data);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Feature gap analysis failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="workspace-page">
       <div className="page-header">
         <div>
-          <h1>Production Gap Workspace</h1>
-          <p>High-value billing optimizer capabilities now organized as implemented production-control work items.</p>
+          <h1>Production Feature Gaps</h1>
+          <p>Missing revenue-cycle capabilities that must become real workflows before this can be treated as a complete healthcare billing product.</p>
         </div>
       </div>
 
       <div className="dashboard-grid">
-        <div className="metric-card"><span>Implemented Features</span><strong>{rows.length}</strong><small>Production records</small></div>
-        <div className="metric-card"><span>Integration Gaps</span><strong>5</strong><small>EHR, payer, EDI, portal, notification</small></div>
-        <div className="metric-card"><span>Revenue Risk</span><strong>High</strong><small>Claims, denials, underpayments</small></div>
+        <div className="metric-card"><span>Open Gaps</span><strong>{rows.length}</strong><small>Features requiring implementation</small></div>
+        <div className="metric-card"><span>Critical Gaps</span><strong>{counts.critical}</strong><small>Must be resolved before production use</small></div>
+        <div className="metric-card"><span>Connector Gaps</span><strong>{counts.integration}</strong><small>EDI, payer, EHR, portal, and delivery integrations</small></div>
+        <div className="metric-card"><span>Visible Gaps</span><strong>{filteredRows.length}</strong><small>Filtered by domain and severity</small></div>
       </div>
 
-      <div className="content-card selected-summary">
-        <div>
-          <h2>{selected[0]}</h2>
-          <p>{selected[2]}</p>
-          <div className="summary-meta">
-            <span className="badge badge-blue">Domain: {selected[1]}</span>
-            <span className="badge badge-green">{selected[3]}</span>
+      {selected && (
+        <div className="content-card selected-summary">
+          <div>
+            <h2>{selected.name}</h2>
+            <p>{selected.capability}</p>
+            <div className="summary-meta">
+              <span className="badge badge-blue">Domain: {selected.domain}</span>
+              <span className="badge badge-yellow">Severity: {selected.severity}</span>
+              <span className="badge badge-red">{selected.status}</span>
+            </div>
           </div>
+          <button className="workspace-action-btn" type="button" onClick={runGapAnalysis} disabled={loading}>
+            {loading ? 'Analyzing...' : 'Analyze Gap with AI'}
+          </button>
+          <textarea
+            className="workspace-context-input"
+            value={context}
+            onChange={(event) => setContext(event.target.value)}
+            placeholder="Optional context: payer, specialty, system constraints, or rollout notes"
+          />
         </div>
-      </div>
+      )}
+
+      {error && <div className="workspace-error">{error}</div>}
+      {(loading || result) && (
+        <div className="content-card">
+          <AIResultDisplay result={result} loading={loading} />
+        </div>
+      )}
 
       <div className="content-card table-shell">
+        <div className="workspace-filters">
+          <div>
+            <label>Domain</label>
+            <select value={domainFilter} onChange={(event) => setDomainFilter(event.target.value)}>
+              {domains.map(domain => <option key={domain} value={domain}>{domain}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Severity</label>
+            <select value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
+              {severities.map(severity => <option key={severity} value={severity}>{severity}</option>)}
+            </select>
+          </div>
+        </div>
         <table className="data-table">
           <thead>
             <tr>
               <th>Feature</th>
               <th>Domain</th>
               <th>Production Capability</th>
+              <th>Severity</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row[0]} onClick={() => setSelected(row)} className={selected[0] === row[0] ? 'is-selected' : ''} style={{ cursor: 'pointer' }}>
-                <td><strong>{row[0]}</strong></td>
-                <td>{row[1]}</td>
-                <td>{row[2]}</td>
-                <td>{row[3]}</td>
+            {filteredRows.map((row) => (
+              <tr key={row.slug} onClick={() => selectRow(row)} className={selected?.slug === row.slug ? 'is-selected' : ''} style={{ cursor: 'pointer' }}>
+                <td><strong>{row.name}</strong></td>
+                <td>{row.domain}</td>
+                <td>{row.capability}</td>
+                <td>{row.severity}</td>
+                <td>{row.status}</td>
               </tr>
             ))}
           </tbody>

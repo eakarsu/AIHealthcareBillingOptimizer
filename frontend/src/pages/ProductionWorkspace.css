@@ -104,6 +104,111 @@
   border-radius: var(--radius-sm);
 }
 
+.workspace-page .workspace-action-btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+  min-width: 180px;
+  padding: 12px 16px;
+}
+
+.workspace-page .workspace-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.workspace-page .workspace-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.workspace-page .workspace-context-input {
+  grid-column: 1 / -1;
+  min-height: 84px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--dark);
+  font: inherit;
+  padding: 12px;
+}
+
+.workspace-page .workspace-error {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  color: #991b1b;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+}
+
+.workspace-page .workspace-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.workspace-page .workspace-filters div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+}
+
+.workspace-page .workspace-filters label {
+  color: var(--dark-secondary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.workspace-page .workspace-filters select {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--dark);
+  font: inherit;
+  padding: 9px 10px;
+}
+
+.workspace-page .workspace-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.workspace-page .workspace-detail-grid h3 {
+  color: var(--dark);
+  font-size: 0.98rem;
+  margin-bottom: 8px;
+}
+
+.workspace-page .workspace-detail-grid p {
+  color: var(--dark-secondary);
+}
+
+.workspace-page .workspace-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workspace-page .workspace-compact-list {
+  color: var(--dark-secondary);
+  margin-left: 18px;
+}
+
+.workspace-page .workspace-compact-list li + li {
+  margin-top: 5px;
+}
+
 .workspace-page .table-shell {
   overflow-x: auto;
 }
@@ -154,7 +259,8 @@
   }
 
   .workspace-page .dashboard-grid,
-  .workspace-page .selected-summary {
+  .workspace-page .selected-summary,
+  .workspace-page .workspace-detail-grid {
     grid-template-columns: 1fr;
   }
 }

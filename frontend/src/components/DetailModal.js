@@ -23,7 +23,10 @@ export default function DetailModal({
 
   const handleEdit = () => {
     const data = {};
-    fields.forEach(f => { data[f.key] = item[f.key] ?? ''; });
+    fields.forEach(f => {
+      const value = item[f.key];
+      data[f.key] = typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : value ?? '';
+    });
     setEditData(data);
     setEditing(true);
   };
@@ -97,6 +100,9 @@ export default function DetailModal({
       const cls = 'badge badge-' + String(val).toLowerCase().replace(/[\s/]+/g, '-');
       return <span className={cls}>{val}</span>;
     }
+    if (typeof val === 'object') {
+      return JSON.stringify(val, null, 2);
+    }
     return String(val);
   };
 
@@ -113,7 +119,11 @@ export default function DetailModal({
             {fields.map(field => (
               <div key={field.key} className={`modal-field ${field.fullWidth ? 'full-width' : ''}`}>
                 <span className="modal-field-label">{field.label}</span>
-                {editing ? (
+                {editing && field.readOnly ? (
+                  <div className="modal-field-value">
+                    {formatDisplay(item[field.key], field)}
+                  </div>
+                ) : editing ? (
                   field.type === 'select' ? (
                     <select
                       className="modal-field-input select"
@@ -178,6 +188,9 @@ export default function DetailModal({
                 </button>
                 <button className="modal-btn modal-btn-danger" onClick={() => setConfirmDelete(true)}>
                   &#x1F5D1; Delete
+                </button>
+                <button className="modal-btn modal-btn-secondary" onClick={onClose}>
+                  Cancel
                 </button>
               </>
             )}

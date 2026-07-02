@@ -5,6 +5,8 @@ import './Sidebar.css';
 const navItems = [
   { section: 'Overview' },
   { path: '/', label: 'Dashboard', icon: '\ud83d\udcca' },
+  { section: 'Assistant' },
+  { path: '/chatbot', label: 'Chatbot', icon: '\ud83d\udcac' },
   { section: 'Billing Operations' },
   { path: '/claims', label: 'Claims Management', icon: '\ud83d\udccb' },
   { path: '/denials', label: 'Denial Management', icon: '\u26d4' },
@@ -30,6 +32,7 @@ const navItems = [
   { section: 'AI Gap Features' },
   { path: '/production-gaps', label: 'Production Gaps', icon: '\u26a0\ufe0f' },
   { path: '/production-controls', label: 'Production Controls', icon: '\ud83d\udee0\ufe0f' },
+  { path: '/integrations', label: 'Integrations', icon: '\ud83d\udd0c' },
   { path: '/gap-no-denial-analyzer-predict-reversals-rec', label: 'Denial Analyzer', icon: '\ud83e\udd16' },
   { path: '/gap-no-coding-recommender-suggest-icd-10cpt', label: 'Coding Recommender', icon: '\ud83d\udcdd' },
   { path: '/gap-no-contract-analyzer', label: 'Contract Analyzer', icon: '\ud83d\udcca' },

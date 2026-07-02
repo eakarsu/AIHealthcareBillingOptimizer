@@ -392,17 +392,123 @@
   letter-spacing: 0.04em;
 }
 
-/* Raw data fallback */
-.ai-raw {
-  background: #1e1e1e;
-  color: #d4d4d4;
+/* Structured AI details */
+.ai-structured {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.ai-structured-section {
+  background: white;
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 16px;
-  font-size: 0.75rem;
-  font-family: 'Menlo', 'Monaco', monospace;
+  padding: 14px;
+}
+
+.ai-kv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.ai-kv-item {
+  background: var(--light-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.ai-kv-label {
+  display: block;
+  color: var(--dark-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.ai-kv-value {
+  color: var(--dark);
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.ai-structured-list {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-structured-list-item {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  background: var(--light-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+
+.ai-list-index {
+  align-items: center;
+  background: var(--primary-light);
+  border-radius: 50%;
+  color: var(--primary);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.ai-structured-table-wrap {
   overflow-x: auto;
+}
+
+.ai-structured-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.ai-structured-table th,
+.ai-structured-table td {
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.78rem;
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.ai-structured-table th {
+  background: var(--light-bg);
+  color: var(--dark-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ai-empty {
+  color: var(--dark-secondary);
+  font-size: 0.82rem;
+}
+
+/* Plain text fallback */
+.ai-raw {
+  background: var(--light-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--dark);
+  line-height: 1.6;
+  padding: 16px;
+  font-size: 0.82rem;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 300px;
-  overflow-y: auto;
 }

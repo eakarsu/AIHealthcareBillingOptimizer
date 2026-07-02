@@ -22,6 +22,9 @@ const codingRoutes = require('./routes/coding');
 const auditRoutes = require('./routes/audit');
 const analyticsRoutes = require('./routes/analytics');
 const aiAnalysisRoutes = require('./routes/ai-analysis');
+const featureGapsRoutes = require('./routes/feature-gaps');
+const integrationsRoutes = require('./routes/integrations');
+const chatbotRoutes = require('./routes/chatbot');
 
 // === Batch 04 Gaps & Frontend Mounts ===
 const route_gap_no_denial_analyzer_predict_reversals_rec = require('../routes/gap-no-denial-analyzer-predict-reversals-rec');
@@ -106,6 +109,9 @@ app.use('/api/coding-optimizations', codingRoutes);
 app.use('/api/audit-trail', auditRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai-analysis', aiAnalysisRoutes);
+app.use('/api/feature-gaps', featureGapsRoutes);
+app.use('/api/integrations', integrationsRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/denial-analyzer', require('./routes/denialAnalyzer'));
 app.use('/api/coding-recommender', require('./routes/codingRecommender'));
 app.use('/api/charge-capture-reconciliation', require('./routes/chargeCaptureReconciliation'));

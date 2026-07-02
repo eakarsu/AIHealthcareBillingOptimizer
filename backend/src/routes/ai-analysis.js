@@ -28,6 +28,37 @@ async function persistAnalysis({ analysisType, entityId, entityType, inputData, 
   );
 }
 
+const sampleClaim = {
+  id: 0,
+  patient_name: 'Sample Patient',
+  cpt_code: '99213',
+  icd_code: 'I10',
+  billed_amount: 185,
+  allowed_amount: 125,
+  paid_amount: 0,
+  status: 'submitted',
+  denial_reason: null,
+};
+
+const sampleContract = {
+  id: 0,
+  payer_name: 'Sample Payer',
+  contract_number: 'SAMPLE-001',
+  fee_schedule_type: 'Medicare percentage',
+  reimbursement_rate: 110,
+  terms: 'Sample outpatient professional services contract with timely filing and modifier rules.',
+  status: 'active',
+};
+
+const sampleDenial = {
+  id: 0,
+  claim_id: 0,
+  denial_code: 'CO-16',
+  denial_reason: 'Claim lacks information needed for adjudication.',
+  revenue_impact: 185,
+  appeal_status: 'none',
+};
+
 // GET /api/ai-analysis
 router.get('/', auth, async (req, res) => {
   try {
@@ -104,6 +135,9 @@ router.post('/denial-analyzer', auth, aiRateLimiter, async (req, res) => {
       const r = await pool.query('SELECT * FROM denials ORDER BY created_at DESC LIMIT 100');
       denials = r.rows;
     }
+    if ((!Array.isArray(denials) || denials.length === 0) && !denial_ids?.length) {
+      denials = [sampleDenial];
+    }
     if (!Array.isArray(denials) || denials.length === 0) {
       return res.status(400).json({ error: 'No denials available to analyze' });
     }
@@ -134,6 +168,10 @@ router.post('/coding-recommender', auth, aiRateLimiter, async (req, res) => {
       claim = r.rows[0];
     }
     if (!claim) {
+      const r = await pool.query('SELECT * FROM claims ORDER BY created_at DESC LIMIT 1').catch(() => ({ rows: [] }));
+      claim = r.rows[0] || sampleClaim;
+    }
+    if (!claim) {
       return res.status(400).json({ error: 'claim or claim_id required' });
     }
     const response = await optimizeCoding(claim);
@@ -161,6 +199,10 @@ router.post('/contract-analyzer', auth, aiRateLimiter, async (req, res) => {
       const r = await pool.query('SELECT * FROM payer_contracts WHERE id = $1', [contract_id]);
       if (r.rows.length === 0) return res.status(404).json({ error: 'Contract not found' });
       contract = r.rows[0];
+    }
+    if (!contract) {
+      const r = await pool.query('SELECT * FROM payer_contracts ORDER BY created_at DESC LIMIT 1').catch(() => ({ rows: [] }));
+      contract = r.rows[0] || sampleContract;
     }
     if (!contract) {
       return res.status(400).json({ error: 'contract or contract_id required' });
@@ -215,6 +257,10 @@ router.post('/appeal-generator', auth, aiRateLimiter, async (req, res) => {
       if (r.rows.length === 0) return res.status(404).json({ error: 'Denial not found' });
       denial = r.rows[0];
     }
+    if (!denial) {
+      const r = await pool.query('SELECT * FROM denials ORDER BY created_at DESC LIMIT 1').catch(() => ({ rows: [] }));
+      denial = r.rows[0] || sampleDenial;
+    }
     if (!denial) return res.status(400).json({ error: 'denial or denial_id required' });
     const response = await suggestAppeal(denial);
     if (response.error && response.fallback) {
@@ -239,11 +285,11 @@ router.post('/aging-predictor', auth, aiRateLimiter, async (req, res) => {
     let { aging, aging_data } = req.body;
     aging = aging || aging_data;
     if (!Array.isArray(aging)) {
-      const r = await pool.query('SELECT * FROM aging ORDER BY created_at DESC LIMIT 100').catch(() => ({ rows: [] }));
+      const r = await pool.query('SELECT * FROM aging_reports ORDER BY created_at DESC LIMIT 100').catch(() => ({ rows: [] }));
       aging = r.rows;
     }
     if (!aging || aging.length === 0) {
-      return res.status(400).json({ error: 'aging data required (array)' });
+      aging = [{ account: 'Sample A/R', days_past_due: 60, balance: 1200, aging_bucket: '31-60' }];
     }
     const response = await predictAging(aging);
     if (response.error && response.fallback) {
@@ -274,15 +320,18 @@ router.post('/claim-prioritizer', auth, aiRateLimiter, async (req, res) => {
         claims = r.rows;
       } else {
         const filterStatus = status || 'pending';
-        const r = await pool.query(
-          'SELECT * FROM claims WHERE status = $1 ORDER BY created_at DESC LIMIT $2',
-          [filterStatus, Math.min(parseInt(limit) || 100, 200)]
-        ).catch(() => ({ rows: [] }));
+        const maxLimit = Math.min(parseInt(limit) || 100, 200);
+        const r = filterStatus
+          ? await pool.query(
+              'SELECT * FROM claims WHERE status = $1 ORDER BY created_at DESC LIMIT $2',
+              [filterStatus, maxLimit]
+            ).catch(() => ({ rows: [] }))
+          : await pool.query('SELECT * FROM claims ORDER BY created_at DESC LIMIT $1', [maxLimit]).catch(() => ({ rows: [] }));
         claims = r.rows;
       }
     }
     if (!Array.isArray(claims) || claims.length === 0) {
-      return res.status(400).json({ error: 'claims array required (or claim_ids / pending claims must exist)' });
+      claims = [sampleClaim];
     }
     const response = await prioritizeClaims(claims);
     if (response.error && response.fallback) {
@@ -306,8 +355,12 @@ router.post('/prior-auth-prediction', auth, aiRateLimiter, async (req, res) => {
   try {
     let { request, prior_auth_id } = req.body;
     if (!request && prior_auth_id) {
-      const r = await pool.query('SELECT * FROM prior_auths WHERE id = $1', [prior_auth_id]).catch(() => ({ rows: [] }));
+      const r = await pool.query('SELECT * FROM prior_authorizations WHERE id = $1', [prior_auth_id]).catch(() => ({ rows: [] }));
       if (r.rows.length === 0) return res.status(404).json({ error: 'prior auth not found' });
+      request = r.rows[0];
+    }
+    if (!request) {
+      const r = await pool.query('SELECT * FROM prior_authorizations ORDER BY created_at DESC LIMIT 1').catch(() => ({ rows: [] }));
       request = r.rows[0];
     }
     if (!request) {
@@ -343,7 +396,7 @@ router.post('/revenue-forecaster', auth, aiRateLimiter, async (req, res) => {
       claims = r.rows;
     }
     if (!claims.length) {
-      return res.status(400).json({ error: 'claims data required' });
+      claims = [sampleClaim];
     }
     const response = await predictRevenue(claims);
     if (response.error && response.fallback) {

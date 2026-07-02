@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getAuditTrail } from '../services/api';
+import { deleteAuditEntry, getAuditTrail, updateAuditEntry } from '../services/api';
+import DetailModal from '../components/DetailModal';
 
 const ACTION_TYPES = ['ALL', 'POST', 'PUT', 'DELETE', 'PATCH', 'READ_PHI', 'READ_CLAIM'];
 
@@ -20,9 +21,11 @@ export default function AuditTrailPage() {
   const [actionFilter, setActionFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [toast, setToast] = useState(null);
   const PAGE_SIZE = 50;
 
-  useEffect(() => {
+  const loadAuditTrail = () => {
     setLoading(true);
     getAuditTrail()
       .then(res => {
@@ -31,7 +34,30 @@ export default function AuditTrailPage() {
       })
       .catch(() => setError('Failed to load audit trail'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadAuditTrail();
   }, []);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleUpdate = async (id, formData) => {
+    await updateAuditEntry(id, formData);
+    showToast('Audit entry updated');
+    setSelectedEntry(null);
+    loadAuditTrail();
+  };
+
+  const handleDelete = async (id) => {
+    await deleteAuditEntry(id);
+    showToast('Audit entry deleted');
+    setSelectedEntry(null);
+    loadAuditTrail();
+  };
 
   const filtered = data.filter(row => {
     const matchesAction = actionFilter === 'ALL' || row.action === actionFilter;
@@ -45,6 +71,18 @@ export default function AuditTrailPage() {
 
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const detailFields = [
+    { key: 'id', label: 'Audit ID', readOnly: true },
+    { key: 'timestamp', label: 'Timestamp', type: 'datetime', readOnly: true },
+    { key: 'created_at', label: 'Created At', type: 'datetime', readOnly: true },
+    { key: 'user_id', label: 'User ID', type: 'number' },
+    { key: 'action', label: 'Action', type: 'badge' },
+    { key: 'entity_type', label: 'Entity Type' },
+    { key: 'entity_id', label: 'Entity ID', type: 'number' },
+    { key: 'ip_address', label: 'IP Address' },
+    { key: 'old_values', label: 'Old Values', type: 'textarea', fullWidth: true },
+    { key: 'new_values', label: 'New Values', type: 'textarea', fullWidth: true },
+  ];
 
   return (
     <div className="feature-page">
@@ -110,7 +148,12 @@ export default function AuditTrailPage() {
                     </td>
                   </tr>
                 ) : paginated.map((row, i) => (
-                  <tr key={row.id || i} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <tr
+                    key={row.id || i}
+                    onClick={() => setSelectedEntry(row)}
+                    style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                    title="View audit entry details"
+                  >
                     <td style={{ padding: '10px 16px', color: '#374151', whiteSpace: 'nowrap' }}>
                       {row.created_at || row.timestamp
                         ? new Date(row.created_at || row.timestamp).toLocaleString('en-US')
@@ -145,6 +188,25 @@ export default function AuditTrailPage() {
             </div>
           )}
         </>
+      )}
+
+      {selectedEntry && (
+        <DetailModal
+          item={selectedEntry}
+          fields={detailFields}
+          title="Audit Entry Details"
+          onClose={() => setSelectedEntry(null)}
+          onSave={handleUpdate}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {toast && (
+        <div className="toast-container">
+          <div className={`toast toast-${toast.type}`}>
+            {toast.type === 'success' ? '\u2705' : '\u274c'} {toast.message}
+          </div>
+        </div>
       )}
     </div>
   );

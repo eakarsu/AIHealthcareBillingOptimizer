@@ -130,6 +130,8 @@ export const optimizeCoding = (id) => API.post(`/coding-optimizations/${id}/opti
 // Audit Trail
 export const getAuditTrail = (params) => API.get('/audit-trail', { params });
 export const getAuditEntry = (id) => API.get(`/audit-trail/${id}`);
+export const updateAuditEntry = (id, data) => API.put(`/audit-trail/${id}`, data);
+export const deleteAuditEntry = (id) => API.delete(`/audit-trail/${id}`);
 
 // Analytics
 export const getDashboardAnalytics = () => API.get('/analytics/dashboard');
@@ -139,6 +141,20 @@ export const predictRevenue = () => API.post('/analytics/ai-predict');
 // AI Analysis
 export const getAIAnalyses = (params) => API.get('/ai-analysis', { params });
 export const getAIAnalysis = (id) => API.get(`/ai-analysis/${id}`);
+
+// Feature gaps
+export const getFeatureGaps = () => API.get('/feature-gaps');
+export const analyzeFeatureGap = (slug, context) => API.post(`/feature-gaps/${slug}/analyze`, { context });
+
+// Integrations
+export const getIntegrations = () => API.get('/integrations');
+export const getIntegration = (slug) => API.get(`/integrations/${slug}`);
+export const getIntegrationReadiness = (slug) => API.get(`/integrations/${slug}/readiness`);
+export const generateIntegrationPlan = (slug, context) => API.post(`/integrations/${slug}/plan`, { context });
+
+// Chatbot
+export const getChatbotHistory = () => API.get('/chatbot/history');
+export const sendChatbotMessage = (message) => API.post('/chatbot/message', { message });
 
 // Dashboard helpers (use analytics endpoints)
 export const getDashboardMetrics = () => API.get('/analytics/dashboard');

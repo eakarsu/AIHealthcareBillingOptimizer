@@ -18,6 +18,12 @@ const pageTitles = {
   '/audit-trail': 'Audit Trail',
   '/analytics': 'Analytics',
   '/ai-analysis': 'AI Analysis',
+  '/advanced-ai': 'Advanced AI',
+  '/chatbot': 'Chatbot',
+  '/production-gaps': 'Production Gaps',
+  '/production-controls': 'Production Controls',
+  '/integrations': 'Integrations',
+  '/custom-views': 'Billing Views',
 };
 
 export default function Navbar() {
