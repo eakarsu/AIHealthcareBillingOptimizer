@@ -12,6 +12,9 @@ const {
 const DB_NAME = getTargetDatabaseName();
 
 async function seed() {
+  if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEMO_SEED !== 'true') {
+    throw new Error('Destructive demo seed refused. Set ALLOW_DEMO_SEED=true outside production.');
+  }
   // Connect to default 'postgres' db to create/drop the target database
   const adminPool = new Pool(getConnectionFields('postgres'));
 

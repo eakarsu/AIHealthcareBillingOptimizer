@@ -27,14 +27,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoLogin = () => {
-    setEmail('admin@healthbilling.com');
-    setPassword('admin123');
-    setTimeout(() => {
-      document.getElementById('login-form').requestSubmit();
-    }, 100);
-  };
-
   return (
     <div className="login-wrapper">
       <div className="login-card">
@@ -90,11 +82,6 @@ export default function LoginPage() {
             )}
           </button>
 
-          <div className="login-divider">or</div>
-
-          <button type="button" className="login-btn login-btn-demo" onClick={handleDemoLogin}>
-            <span role="img" aria-label="demo">&#x1F50D;</span> Demo Login
-          </button>
         </form>
       </div>
     </div>

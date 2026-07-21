@@ -25,21 +25,12 @@ const aiAnalysisRoutes = require('./routes/ai-analysis');
 const featureGapsRoutes = require('./routes/feature-gaps');
 const integrationsRoutes = require('./routes/integrations');
 const chatbotRoutes = require('./routes/chatbot');
+const { validateRuntime } = require('./governance/runtime');
+const governanceRouter = require('./governance/router');
+
+validateRuntime();
 
 // === Batch 04 Gaps & Frontend Mounts ===
-const route_gap_no_denial_analyzer_predict_reversals_rec = require('../routes/gap-no-denial-analyzer-predict-reversals-rec');
-const route_gap_no_coding_recommender_suggest_icd_10cpt = require('../routes/gap-no-coding-recommender-suggest-icd-10cpt');
-const route_gap_no_contract_analyzer = require('../routes/gap-no-contract-analyzer');
-const route_gap_no_claim_prioritizer = require('../routes/gap-no-claim-prioritizer');
-const route_gap_no_compliance_risk_checker = require('../routes/gap-no-compliance-risk-checker');
-const route_gap_no_prior_auth_approval_likelihood_predic = require('../routes/gap-no-prior-auth-approval-likelihood-predic');
-const route_gap_no_ehr_integration_clinical_data_for = require('../routes/gap-no-ehr-integration-clinical-data-for');
-const route_gap_no_payer_api_integration_real_time = require('../routes/gap-no-payer-api-integration-real-time');
-const route_gap_no_appeal_workflow_automation = require('../routes/gap-no-appeal-workflow-automation');
-const route_gap_no_provider_credential_verification = require('../routes/gap-no-provider-credential-verification');
-const route_gap_no_notification_engine_0_references = require('../routes/gap-no-notification-engine-0-references');
-const route_gap_no_webhook_surface_for_payer_event = require('../routes/gap-no-webhook-surface-for-payer-event');
-const route_gap_no_file_upload_for_clinical_notes = require('../routes/gap-no-file-upload-for-clinical-notes');
 const app = express();
 const PORT = process.env.BACKEND_PORT || 4000;
 const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_URL || 'http://localhost:3000,http://localhost:3001')
@@ -116,21 +107,9 @@ app.use('/api/denial-analyzer', require('./routes/denialAnalyzer'));
 app.use('/api/coding-recommender', require('./routes/codingRecommender'));
 app.use('/api/charge-capture-reconciliation', require('./routes/chargeCaptureReconciliation'));
 app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/governed-revenue-cycle', governanceRouter);
 
 // === Batch 04 Gap Routes (must be before error/404 handlers) ===
-app.use('/api/gap-no-denial-analyzer-predict-reversals-rec', route_gap_no_denial_analyzer_predict_reversals_rec);
-app.use('/api/gap-no-coding-recommender-suggest-icd-10cpt', route_gap_no_coding_recommender_suggest_icd_10cpt);
-app.use('/api/gap-no-contract-analyzer', route_gap_no_contract_analyzer);
-app.use('/api/gap-no-claim-prioritizer', route_gap_no_claim_prioritizer);
-app.use('/api/gap-no-compliance-risk-checker', route_gap_no_compliance_risk_checker);
-app.use('/api/gap-no-prior-auth-approval-likelihood-predic', route_gap_no_prior_auth_approval_likelihood_predic);
-app.use('/api/gap-no-ehr-integration-clinical-data-for', route_gap_no_ehr_integration_clinical_data_for);
-app.use('/api/gap-no-payer-api-integration-real-time', route_gap_no_payer_api_integration_real_time);
-app.use('/api/gap-no-appeal-workflow-automation', route_gap_no_appeal_workflow_automation);
-app.use('/api/gap-no-provider-credential-verification', route_gap_no_provider_credential_verification);
-app.use('/api/gap-no-notification-engine-0-references', route_gap_no_notification_engine_0_references);
-app.use('/api/gap-no-webhook-surface-for-payer-event', route_gap_no_webhook_surface_for_payer_event);
-app.use('/api/gap-no-file-upload-for-clinical-notes', route_gap_no_file_upload_for_clinical_notes);
 
 // === Custom Feature (cf-*) Routes — frontend pages existed but backend was missing ===
 app.use('/api/cf-agentic-denial-management-autonomously-d', require('../routes/cf-agentic-denial-management-autonomously-d'));
