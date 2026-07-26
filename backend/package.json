@@ -7,6 +7,7 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "seed": "node src/seeds/seed.js",
+    "provision:demo-credentials": "node src/scripts/provision-demo-credentials.js",
     "test:governance": "node --test tests/governance.test.js",
     "check:governance": "node --check src/governance/workflowCore.js && node --check src/governance/routerFactory.js && node --check src/index.js && npm run test:governance"
   },
