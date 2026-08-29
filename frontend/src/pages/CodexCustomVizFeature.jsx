@@ -1,68 +1,22 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 
-const signals = [
-  { label: 'Demand', value: 72, delta: '+12%' },
-  { label: 'Risk', value: 44, delta: '-8%' },
-  { label: 'Capacity', value: 86, delta: '+6%' },
-  { label: 'Quality', value: 63, delta: '+4%' },
-  { label: 'Velocity', value: 58, delta: '+9%' },
-];
+const scenario = {
+  eyebrow: 'Commercial extension', title: 'Underpayment Recovery Lab',
+  summary: 'Model a paid-claims pilot and stage the EDI, contract, appeal, and payment evidence needed to recover revenue.',
+  volumeLabel: 'Annual paid claims', unitValueLabel: 'Average allowed amount', issueRateLabel: 'Underpayment / denial rate', improvementLabel: 'Recoverable share',
+  defaults: [180000, 840, 5.5, 48], baselineLabel: 'Annual allowed value', opportunityLabel: 'Detected opportunity', resultLabel: 'Expected recovery',
+  pricing: 'Per claim or billing seat, with an optional performance fee on independently validated recovered payments.',
+  milestones: ['Load one payer contract and 837/835 cohort', 'Reproduce expected-versus-paid calculations', 'Generate evidence-backed appeal packages', 'Reconcile recovered cash and payer outcomes'],
+  connectors: ['EDI 837/835 and clearinghouse', 'Payer contract repository', 'Appeal and payment status feed'],
+};
 
-const trend = [18, 32, 28, 46, 41, 57, 69, 64, 78, 72, 88, 83];
-const maxTrend = Math.max(...trend);
-const points = trend.map((value, index) => {
-  const x = 28 + index * 42;
-  const y = 172 - (value / maxTrend) * 128;
-  return `${x},${y}`;
-}).join(' ');
-
-function TimelineView() {
-  return (
-    <section style={{ padding: 24, color: '#172033' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div>
-          <p style={{ margin: 0, color: '#64748b', fontSize: 13, fontWeight: 700, textTransform: 'uppercase' }}>Custom visualization</p>
-          <h1 style={{ margin: '6px 0 0', fontSize: 30 }}> AI Healthcare Billing Optimizer Insight Map</h1>
-        </div>
-        <div style={{ padding: '10px 14px', border: '1px solid #d7dde8', borderRadius: 8, background: '#f8fafc' }}>Live scenario model</div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1.3fr) minmax(260px, .7fr)', gap: 18, marginTop: 20 }}>
-        <div style={{ border: '1px solid #d7dde8', borderRadius: 8, padding: 18, background: '#ffffff' }}>
-          <svg viewBox="0 0 520 220" role="img" aria-label="Custom trend visualization" style={{ width: '100%', height: 260 }}>
-            <rect x="0" y="0" width="520" height="220" rx="8" fill="#f8fafc" />
-            {[44, 76, 108, 140, 172].map((y) => (
-              <line key={y} x1="28" x2="492" y1={y} y2={y} stroke="#e2e8f0" strokeWidth="1" />
-            ))}
-            <polyline points={points} fill="none" stroke="#0f766e" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            {trend.map((value, index) => {
-              const x = 28 + index * 42;
-              const y = 172 - (value / maxTrend) * 128;
-              return <circle key={index} cx={x} cy={y} r="5" fill="#14b8a6" stroke="#ffffff" strokeWidth="2" />;
-            })}
-            <text x="28" y="204" fill="#64748b" fontSize="12">Start</text>
-            <text x="448" y="204" fill="#64748b" fontSize="12">Current</text>
-          </svg>
-        </div>
-
-        <div style={{ display: 'grid', gap: 12 }}>
-          {signals.map((signal) => (
-            <div key={signal.label} style={{ border: '1px solid #d7dde8', borderRadius: 8, padding: 14, background: '#ffffff' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <strong>{signal.label}</strong>
-                <span style={{ color: signal.delta.startsWith('+') ? '#047857' : '#b45309' }}>{signal.delta}</span>
-              </div>
-              <div style={{ height: 10, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' }}>
-                <div style={{ width: `${signal.value}%`, height: '100%', background: '#0f766e' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+const usd = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value || 0));
 
 export default function CodexCustomVizFeature() {
-  return <TimelineView />;
+  const [volume, setVolume] = useState(scenario.defaults[0]); const [unitValue, setUnitValue] = useState(scenario.defaults[1]);
+  const [issueRate, setIssueRate] = useState(scenario.defaults[2]); const [improvement, setImprovement] = useState(scenario.defaults[3]);
+  const result = useMemo(() => { const baseline=Number(volume)*Number(unitValue); const opportunity=baseline*Number(issueRate)/100; return { baseline, opportunity, captured:opportunity*Number(improvement)/100 }; }, [volume, unitValue, issueRate, improvement]);
+  const field = (label,value,setter,suffix='') => <label style={{display:'grid',gap:7,fontWeight:750,color:'#475569'}}><span>{label}</span><div style={{display:'flex',alignItems:'center',gap:8}}><input type="number" min="0" step="any" value={value} onChange={event=>setter(event.target.value)} style={{width:'100%',padding:'11px 12px',border:'1px solid #cbd5e1',borderRadius:9}}/>{suffix&&<b style={{color:'#0f766e'}}>{suffix}</b>}</div></label>;
+  const metric = (label,value) => <article style={{background:'#fff',border:'1px solid #dbe3ec',borderRadius:14,padding:18}}><span style={{fontSize:12,color:'#64748b',fontWeight:750}}>{label}</span><strong style={{display:'block',fontSize:27,marginTop:7}}>{usd(value)}</strong></article>;
+  return <section style={{padding:24,color:'#172033'}}><p style={{margin:0,color:'#0f766e',fontSize:12,fontWeight:850,textTransform:'uppercase',letterSpacing:'.12em'}}>{scenario.eyebrow}</p><h1 style={{fontSize:32,margin:'7px 0'}}>{scenario.title}</h1><p style={{color:'#64748b',maxWidth:850}}>{scenario.summary}</p><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:13,margin:'20px 0'}}>{metric(scenario.baselineLabel,result.baseline)}{metric(scenario.opportunityLabel,result.opportunity)}{metric(scenario.resultLabel,result.captured)}{metric('Monthly realized value',result.captured/12)}</div><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))',gap:16}}><article style={{background:'#fff',border:'1px solid #dbe3ec',borderRadius:14,padding:20}}><h2 style={{marginTop:0}}>Interactive pilot assumptions</h2><div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:14}}>{field(scenario.volumeLabel,volume,setVolume)}{field(scenario.unitValueLabel,unitValue,setUnitValue)}{field(scenario.issueRateLabel,issueRate,setIssueRate,'%')}{field(scenario.improvementLabel,improvement,setImprovement,'%')}</div><div style={{marginTop:17,padding:14,borderRadius:10,background:'#f0fdfa',color:'#134e4a'}}><strong>Commercial model</strong><p style={{marginBottom:0}}>{scenario.pricing}</p></div></article><article style={{background:'#fff',border:'1px solid #dbe3ec',borderRadius:14,padding:20}}><h2 style={{marginTop:0}}>Measured rollout</h2>{scenario.milestones.map((item,index)=><div key={item} style={{display:'grid',gridTemplateColumns:'32px 1fr',gap:10,alignItems:'center',padding:'10px 0',borderBottom:'1px solid #e2e8f0'}}><span style={{display:'grid',placeItems:'center',width:28,height:28,borderRadius:'50%',background:'#0f766e',color:'#fff',fontWeight:850}}>{index+1}</span><strong>{item}</strong></div>)}</article></div><article style={{background:'#fff',border:'1px solid #dbe3ec',borderRadius:14,padding:20,marginTop:16}}><h2 style={{marginTop:0}}>Authoritative connector plan</h2><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12}}>{scenario.connectors.map((item,index)=><div key={item} style={{padding:15,border:'1px solid #dbe3ec',borderRadius:11,background:'#f8fafc'}}><span style={{fontSize:11,fontWeight:850,color:index?'#b45309':'#047857'}}>{index?'PLANNED':'PILOT'}</span><h3 style={{fontSize:15}}>{item}</h3><p style={{fontSize:12,color:'#64748b'}}>Require stable IDs, versioned schemas, idempotent receipts, explicit failures, and reconciliation evidence.</p></div>)}</div></article></section>;
 }
