@@ -1,5 +1,6 @@
 function createGovernedRouter({ express, workflow, auth, db }) {
   const crypto = require('node:crypto');
+  const { prioritizeDenials, buildAppealPackage } = require('./denialOperations');
   const router = express.Router();
   const identifier = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
   const connectorNames = new Set((workflow.config.connectors || []).map((item) => item.name));
@@ -64,6 +65,9 @@ function createGovernedRouter({ express, workflow, auth, db }) {
       })),
     });
   });
+
+  router.post('/denials/prioritize', (req,res) => { try { res.json(prioritizeDenials(req.body||{})); } catch(error) { respondError(res,error); } });
+  router.post('/denials/appeal-package', (req,res) => { try { res.json(buildAppealPackage(req.body||{})); } catch(error) { respondError(res,error); } });
 
   router.get('/cases', async (req, res) => {
     try {

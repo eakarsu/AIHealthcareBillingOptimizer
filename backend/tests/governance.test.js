@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createWorkflow } = require('../src/governance/workflowCore');
 const config = require('../src/governance/config');
+const { prioritizeDenials, buildAppealPackage } = require('../src/governance/denialOperations');
 
 const workflow = createWorkflow(config);
 const actor = (role, id = 'actor-a') => ({
@@ -146,3 +147,5 @@ test('dual-control, persistence, tenant-scope, and audit contracts are encoded',
   assert.match(router, /\/cases\/:id\/history/);
   assert.match(router, /quarantined_until_credentialed_and_contract_tested/);
 });
+
+test('denial queue prioritizes deadlines and produces human-approved appeal drafts',()=>{const queue=prioritizeDenials({asOf:'2026-08-30T00:00:00Z',denials:[{claimRef:'late',appealDueAt:'2026-08-29T00:00:00Z',amountMinor:10000},{claimRef:'later',appealDueAt:'2026-10-01T00:00:00Z',amountMinor:500000}]});assert.equal(queue.items[0].claimRef,'late');const packet=buildAppealPackage({claimRef:'late',payerRef:'payer-1',denialReason:'medical necessity',evidenceDigests:['a'.repeat(64)]});assert.equal(packet.status,'draft_requires_human_approval');assert.equal(packet.automaticSubmission,false);});

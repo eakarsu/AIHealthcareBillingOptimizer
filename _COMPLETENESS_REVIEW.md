@@ -55,3 +55,7 @@ Treat this as a prototype: use feature engine and cf agentic denial management a
 - 3. Added dependency-free tests for eligibility, code/coverage versions, encounter completeness, claim control references, state routing, evidence, RBAC, independent approval, reconciliation persistence, optimistic concurrency, and migration/router contracts.
 - 4. Enforced tenant and subject scope, opaque patient/claim references, raw-content rejection, immutable audit evidence, certified-coder and separate payment/reconciliation roles, and a hard boundary against autonomous coding, claim, appeal, or payment commitments.
 - 5. Added a forward-only migration, contract/authorization/state-path tests, CI, secure connector configuration template, provider quarantine runbook, and non-destructive launcher. Real EDI/FHIR/payment/database end-to-end tests and privacy/security validation remain deployment gates.
+
+## Extension (2026-08-30)
+
+Added governed denial prioritization and appeal-package draft endpoints. Deadline, amount and repeat-denial signals produce an explainable queue; evidence digests are required for appeal drafts, and automatic submission is prohibited. X12/clearinghouse transport and payer-contract validation remain open.
