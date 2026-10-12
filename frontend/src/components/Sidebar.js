@@ -1,3 +1,4 @@
+import AIReportLibrary from "./AIReportLibrary";
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
@@ -83,7 +84,7 @@ export default function Sidebar({ isOpen, onClose }) {
             )
           )}
         </nav>
-      </aside>
+      <AIReportLibrary /></aside>
     </>
   );
 }

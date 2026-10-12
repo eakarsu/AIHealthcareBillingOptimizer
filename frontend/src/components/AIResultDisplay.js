@@ -89,7 +89,8 @@ function unwrapAIData(data) {
 }
 
 function formatValue(value) {
-  if (value === null || value === undefined || value === '') return 'Not provided';
+  if (value === null || value === undefined) return 'Not provided';
+  if (value === '') return 'Empty string';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (typeof value === 'number') return Number.isInteger(value) ? value.toLocaleString() : value.toFixed(2);
   if (typeof value === 'string') return value;
@@ -158,7 +159,7 @@ function parseAIContent(data) {
     structuredSections: [],
   };
 
-  if (!data) return result;
+  if (data === null || data === undefined) return result;
 
   // Handle string response
   const unwrapped = unwrapAIData(data);
@@ -187,7 +188,7 @@ function parseAIContent(data) {
   }
 
   // Summary
-  result.summary = d.summary || d.description || d.overview || d.analysis_summary || null;
+  result.summary = d.summary ?? d.description ?? d.overview ?? d.analysis_summary ?? null;
 
   // Risk scores
   if (d.risk_score !== undefined) {
@@ -299,7 +300,7 @@ function parseAIContent(data) {
 
   if (d && typeof d === 'object' && !Array.isArray(d)) {
     result.structuredSections = Object.entries(d)
-      .filter(([key, value]) => !handledKeys.has(key) && value !== null && value !== undefined && value !== '')
+      .filter(([key]) => !handledKeys.has(key))
       .map(([key, value]) => ({ title: humanizeLabel(key), value }));
   } else if (Array.isArray(d)) {
     result.structuredSections = [{ title: 'Results', value: d }];
@@ -324,7 +325,7 @@ function isPrimitive(value) {
 }
 
 function ObjectTable({ value }) {
-  const entries = Object.entries(value || {}).filter(([, item]) => item !== null && item !== undefined && item !== '');
+  const entries = Object.entries(value || {});
   if (entries.length === 0) return <p className="ai-empty">No details provided.</p>;
 
   return (
@@ -414,7 +415,7 @@ export default function AIResultDisplay({ result, loading }) {
     );
   }
 
-  if (!result) return null;
+  if (result === null || result === undefined) return null;
 
   if (result.error) {
     return (
@@ -437,8 +438,8 @@ export default function AIResultDisplay({ result, loading }) {
         </div>
       </div>
 
-      {parsed.summary && (
-        <div className="ai-summary">{parsed.summary}</div>
+      {parsed.summary !== null && parsed.summary !== undefined && (
+        <div className="ai-summary">{parsed.summary === '' ? 'Empty string' : parsed.summary}</div>
       )}
 
       {parsed.narrativeText && (

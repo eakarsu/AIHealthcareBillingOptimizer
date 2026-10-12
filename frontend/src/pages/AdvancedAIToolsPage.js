@@ -17,7 +17,7 @@ const TABS = [
   { id: 'revenue', label: 'Revenue Forecaster' },
 ];
 
-const sampleCompliance = '{\n  "type": "claim",\n  "id": 1,\n  "status": "submitted",\n  "documentation": "clinical note attached"\n}';
+const sampleCompliance = '{\n  "type": "claim",\n  "status": "submitted",\n  "documentation": "Clinical note attached"\n}';
 const sampleAging = '[\n  {"account": "A1", "days_past_due": 60, "balance": 1200}\n]';
 const samplePriorAuth = '{\n  "payer": "Aetna",\n  "service": "MRI brain",\n  "supporting_codes": ["G89.0"],\n  "clinical_notes": "Persistent migraine"\n}';
 
@@ -86,6 +86,39 @@ export default function AdvancedAIToolsPage() {
   const [prioritizeForm, setPrioritizeForm] = useState({ claim_ids: '', status: 'pending', limit: '50' });
   const [priorAuthForm, setPriorAuthForm] = useState({ prior_auth_id: '', request_json: samplePriorAuth });
   const [revenueForm, setRevenueForm] = useState({ lookback_days: '90' });
+
+  const presetLabels = ['Recent review', 'Focused follow-up', 'Executive review'];
+  const recordChoice = (current, records, index) => current || String(records[index % records.length]?.id || '');
+  const fillPreset = (index) => {
+    const complianceExamples = [
+      { type: 'claim', status: 'submitted', documentation: 'Clinical note and diagnosis are attached', billed_amount: 1200 },
+      { type: 'payment', status: 'under_review', documentation: 'Remittance differs from expected contractual amount', billed_amount: 650 },
+      { type: 'contract', status: 'active', documentation: 'Fee schedule and effective dates need review', billed_amount: 2400 },
+    ];
+    const agingExamples = [
+      [{ account: 'Example A', days_past_due: 30, balance: 1200, payer: 'Commercial' }],
+      [{ account: 'Example B', days_past_due: 60, balance: 650, payer: 'Medicare' }],
+      [{ account: 'Example C', days_past_due: 90, balance: 2400, payer: 'Commercial' }],
+    ];
+    const priorAuthExamples = [
+      { payer: 'Commercial payer', service: 'MRI brain', supporting_codes: ['G43.909'], clinical_notes: 'Persistent headache despite initial treatment' },
+      { payer: 'Medicare Advantage', service: 'Physical therapy', supporting_codes: ['M54.50'], clinical_notes: 'Ongoing functional limitation documented' },
+      { payer: 'Commercial payer', service: 'Sleep study', supporting_codes: ['G47.33'], clinical_notes: 'Symptoms and prior assessment documented' },
+    ];
+    if (tab === 'denial') setDenialForm({ denial_ids: recordChoice(denialForm.denial_ids, lookups.denials, index) });
+    if (tab === 'coding') setCodingForm({ claim_id: recordChoice(codingForm.claim_id, lookups.claims, index) });
+    if (tab === 'contract') setContractForm({ contract_id: recordChoice(contractForm.contract_id, lookups.contracts, index) });
+    if (tab === 'compliance') setComplianceForm({ compliance_id: recordChoice(complianceForm.compliance_id, lookups.compliance, index), entity_type: complianceExamples[index].type, record_json: JSON.stringify(complianceExamples[index], null, 2) });
+    if (tab === 'appeal') setAppealForm({ denial_id: recordChoice(appealForm.denial_id, lookups.denials, index) });
+    if (tab === 'aging') setAgingForm({ aging_id: recordChoice(agingForm.aging_id, lookups.aging, index), aging_json: JSON.stringify(agingExamples[index], null, 2) });
+    if (tab === 'prioritize') setPrioritizeForm({ claim_ids: recordChoice(prioritizeForm.claim_ids, lookups.claims, index), status: ['pending', 'submitted', 'denied'][index], limit: ['25', '50', '100'][index] });
+    if (tab === 'priorauth') setPriorAuthForm({ prior_auth_id: recordChoice(priorAuthForm.prior_auth_id, lookups.priorAuths, index), request_json: JSON.stringify(priorAuthExamples[index], null, 2) });
+    if (tab === 'revenue') setRevenueForm({ lookback_days: ['30', '90', '365'][index] });
+    setError(null);
+    setResult(null);
+  };
+  const requiredRecords = { denial: lookups.denials, coding: lookups.claims, contract: lookups.contracts, appeal: lookups.denials, prioritize: lookups.claims };
+  const missingRecord = requiredRecords[tab] && requiredRecords[tab].length === 0;
 
   useEffect(() => {
     let mounted = true;
@@ -254,6 +287,11 @@ export default function AdvancedAIToolsPage() {
       )}
 
       <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: 16 }}>
+        <div className="ai-preset-bar">
+          <div><strong>Fill sample fields</strong><p>Review the values before running. Existing record selections are kept.</p></div>
+          <div className="ai-actions">{presetLabels.map((label, index) => <button key={label} type="button" className="btn btn-secondary" disabled={loading} onClick={() => fillPreset(index)}>{label}</button>)}</div>
+        </div>
+        {missingRecord && !lookupsLoading && <p role="status" style={helpText}>No record is available for this tool. Select an existing record or supply a genuine record ID before running an analysis.</p>}
         {tab === 'denial' && (
           <form onSubmit={onDenial}>
             <div style={{ marginBottom: 12 }}>
